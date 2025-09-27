@@ -1,6 +1,9 @@
 package aplicacion;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
 import javax.swing.*;
 import gUILayer.*;
 
@@ -14,6 +17,7 @@ public class App extends JFrame {
     private GestionUsuariosUI panelUsuarios;
     private GestionPrestamosUI panelPrestamos;
     private Buscable panelActivo;
+    
     
     public App() {
         setTitle("Sistema de Control Bibliotecario");
@@ -63,16 +67,24 @@ public class App extends JFrame {
         btnPrestamos.setToolTipText("Gestión Préstamos");
         btnPrestamos.setBorderPainted(false);
         
-        JButton btnBuscar = new JButton(iconoBuscar);
+        JButton btnBuscar = new JButton("Buscar", iconoBuscar);
         btnBuscar.setToolTipText("Buscar");
         btnBuscar.setBorderPainted(false);
-      
+        
+        //CAMPO DE TEXTO PARA BUSCAR
+        JTextField txtBuscar = new JTextField(15);
+        txtBuscar.setMaximumSize(txtBuscar.getPreferredSize()); 
+        txtBuscar.setVisible(false);
+        
         
         toolBar.add(btnLibros);
         toolBar.add(btnUsuarios);
         toolBar.add(btnPrestamos);
         toolBar.add(Box.createHorizontalGlue());
         toolBar.add(btnBuscar);
+        toolBar.add(txtBuscar);
+
+        final boolean[] buscando = {false};
 
         
         cardLayout = new CardLayout();
@@ -109,15 +121,26 @@ public class App extends JFrame {
         });
 
         btnBuscar.addActionListener(e -> {
-            if (panelActivo != null) {
-                String criterio = JOptionPane.showInputDialog(this, "Ingrese el término a buscar:");
-                if (criterio != null && !criterio.trim().isEmpty()) {
-                    panelActivo.buscar(criterio); 
+        	buscando[0] = !buscando[0]; 
+            txtBuscar.setVisible(buscando[0]);
+            toolBar.revalidate(); 
+            toolBar.repaint();
+            
+            if (buscando[0]) txtBuscar.requestFocusInWindow(); 
+            else txtBuscar.setText(""); 
+            
+        });
+        
+        txtBuscar.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (panelActivo != null) {
+                    String criterio = txtBuscar.getText().trim();
+                    panelActivo.buscar(criterio);
                 }
-            } else {
-                JOptionPane.showMessageDialog(this, "No hay un panel activo para buscar.");
             }
         });
+
         
         
         itemGestionLibros.addActionListener(e-> cardLayout.show(panelPrincipal, "LIBROS"));
