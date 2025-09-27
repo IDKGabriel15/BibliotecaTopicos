@@ -5,6 +5,7 @@ import java.awt.*;
 //import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.Year;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -98,25 +99,20 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     }
 
     private void cargarDatosTabla() {
-        modeloTabla.setRowCount(0);
-
-        for (Libro libro : listaLibros) {	
-            Object[] fila = {libro.getid(), libro.getTitulo(), libro.getAutor(), libro.getAnioPublicacion(), libro.isDisponible() ? "Sí" : "No"};
-            modeloTabla.addRow(fila);
-        }
+        cargarDatosTabla("");
     }
 
     private void cargarDatosTabla(String busqueda) {
         modeloTabla.setRowCount(0);
-        for (Libro libro : listaLibros) {
-            Object[] fila = { libro.getid(), libro.getTitulo(), libro.getAutor(), libro.getAnioPublicacion(), libro.isDisponible() ? "Sí" : "No" };
-            for(Object elemento : fila){
-                if(elemento != null && elemento.toString().toLowerCase().contains(busqueda.toLowerCase())){
-                    modeloTabla.addRow(fila);
-                    break;
-                }
-            }
-        }
+        listaLibros.stream()
+            .filter(libro -> busqueda.isEmpty() || 
+                (libro.getTitulo() + libro.getAutor() + libro.getAnioPublicacion())
+                    .toLowerCase()
+                    .contains(busqueda.toLowerCase()))
+            .forEach(libro -> modeloTabla.addRow(new Object[] {
+                libro.getid(), libro.getTitulo(), libro.getAutor(), libro.getAnioPublicacion(),
+                libro.isDisponible() ? "Sí" : "No"
+            }));
     }
 
     // --- Lógica de Negocio ---
@@ -132,27 +128,30 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     }
 
     private void guardarLibro() {
-        if (!txtId.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El registro ya existe", "Registro existente",
-                JOptionPane.ERROR_MESSAGE);
-                return;
-        }
-        
-        if (txtTitulo.getText().isEmpty() || txtAutor.getText().isEmpty() || txtAnio.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos los campos (excepto ID) son obligatorios.",
-                    "Error de Validación", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    	
+    	
+    	for (Libro libro : listaLibros) {
+	        if (libro.getTitulo().equalsIgnoreCase(txtTitulo.getText().trim()) &&
+	            libro.getAutor().equalsIgnoreCase(txtAutor.getText().trim())) {
+	            JOptionPane.showMessageDialog(this,
+	                "Ya existe un libro con el mismo título y autor.",
+	                "Duplicado",
+	                JOptionPane.ERROR_MESSAGE);
+	            return;
+	        }
+	    }
+    	
+    	if (!txtId.getText().isEmpty()) {
+	        JOptionPane.showMessageDialog(this, 
+	            "El registro ya existe. Limpia los campos para agregar un nuevo libro.", 
+	            "Registro existente",
+	            JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
 
-        int anio;
-        try {
-            anio = Integer.parseInt(txtAnio.getText());
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El año de publicación debe ser un número válido.", "Error de Formato",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
+    	if(!validarCampos()) return;
+    	
+        int anio = Integer.parseInt(txtAnio.getText().trim());
         int nuevoId = generarNuevoId();
 
         Libro nuevoLibro = new Libro(nuevoId, txtTitulo.getText(), txtAutor.getText(), anio);
@@ -176,21 +175,9 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         int idModificar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
         Libro libroExistente = buscarLibroPorId(idModificar);
 
-        // Validación de campos
-        if (txtTitulo.getText().isEmpty() || txtAutor.getText().isEmpty() || txtAnio.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error de Validación",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if(!validarCampos()) return;
 
-        int anio;
-        try {
-            anio = Integer.parseInt(txtAnio.getText());
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El año de publicación debe ser un número válido.", "Error de Formato",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        int anio = Integer.parseInt(txtAnio.getText());
 
         libroExistente.setTitulo(txtTitulo.getText());
         libroExistente.setAutor(txtAutor.getText());
@@ -209,7 +196,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
                     JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+        
         int opcion = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que deseas eliminar este libro?",
                 "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
 
@@ -217,6 +204,15 @@ public class GestionLibrosUI extends JPanel implements Buscable {
             int idAEliminar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
             Libro libroAEliminar = buscarLibroPorId(idAEliminar);
 
+            if(!libroAEliminar.isDisponible()) {
+                JOptionPane.showMessageDialog(this,
+                    "No es posible eliminar el libro porque no está disponible.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            
             listaLibros.remove(libroAEliminar);
             libroDAO.guardarTodos(listaLibros);
 
@@ -227,6 +223,66 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         }
     }
 
+    private boolean validarCampos() {
+	    if (txtTitulo.getText().trim().isEmpty() || 
+	        txtAutor.getText().trim().isEmpty() || 
+	        txtAnio.getText().trim().isEmpty()) {
+	        
+	        JOptionPane.showMessageDialog(this, 
+	            "Todos los campos (excepto ID) son obligatorios.", 
+	            "Error de Validación", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+	    
+	    if (txtTitulo.getText().trim().length() < 2 || txtTitulo.getText().trim().length() > 100) {
+	        JOptionPane.showMessageDialog(this,
+	            "El título debe tener entre 2 y 100 caracteres.",
+	            "Error de Validación",
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+
+	    if (txtAutor.getText().trim().length() < 2 || txtAutor.getText().trim().length() > 100) {
+	        JOptionPane.showMessageDialog(this,
+	            "El autor debe tener entre 2 y 100 caracteres.",
+	            "Error de Validación",
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+
+	    if (!txtAutor.getText().trim().matches("[a-zA-ZáéíóúÁÉÍÓÚñÑ .,'-]+")) {
+	        JOptionPane.showMessageDialog(this,
+	            "El nombre del autor contiene caracteres inválidos.",
+	            "Error de Validación",
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+
+	
+	    int anio;
+	    try {
+	        anio = Integer.parseInt(txtAnio.getText().trim());
+	    } catch (NumberFormatException ex) {
+	        JOptionPane.showMessageDialog(this, 
+	            "El año de publicación debe ser un número válido.", 
+	            "Error de Formato", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+	
+	    int anioActual = Year.now().getValue();
+	    if (anio < 0 || anio > anioActual) {
+	        JOptionPane.showMessageDialog(this, 
+	            "El año de publicación debe ser menor o igual a: " + anioActual + ".", 
+	            "Error de Validación", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return false;
+	    }
+	
+	    return true;
+    }
+   
     private void limpiarCampos() {
         txtId.setText("");
         txtTitulo.setText("");
