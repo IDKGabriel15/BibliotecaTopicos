@@ -10,7 +10,6 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 import entidades.Usuario;
 import DAO.UsuarioDAO;
-import java.time.Year;
 
 
 public class GestionUsuariosUI extends JPanel implements Buscable {
@@ -131,18 +130,11 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
     }
 
     private void guardarUsuario() {
-        if (!txtId.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El registro ya existe", "Registro existente",
-                JOptionPane.ERROR_MESSAGE);
-                return;
-        }
-
-        if (txtNombre.getText().isEmpty() || txtApellido.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El Nombre y Apellido son obligatorios.", "Error de Validación",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
+    	
+    	if(!validarCampos()) {
+    		return;
+    	}
+    	
         // Genera un nuevo ID automáticamente
         int nuevoId = generarNuevoId();
 
@@ -196,7 +188,6 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
                 "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
 
         if (opcion == JOptionPane.YES_OPTION) {
-            // Obtiene el ID de la fila seleccionada
             int idAEliminar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
             Usuario usuarioAEliminar = buscarUsuarioPorId(idAEliminar);
 
@@ -209,6 +200,50 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
         }
     }
 
+    private boolean validarCampos() {
+    	 if (!txtId.getText().isEmpty()) {
+             JOptionPane.showMessageDialog(this, "El registro ya existe", "Registro existente",
+                 JOptionPane.ERROR_MESSAGE);
+                 return false;
+         }
+
+         if (txtNombre.getText().isEmpty() || txtApellido.getText().isEmpty() || txtTelefono.getText().isEmpty()) {
+             JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error de Validación",
+                     JOptionPane.ERROR_MESSAGE);
+             return false;
+         }
+         
+         if(txtNombre.getText().trim().length() < 2 || txtNombre.getText().trim().length() > 100) {
+        	 JOptionPane.showMessageDialog(this,
+     	            "El Nombre debe tener entre 2 y 100 caracteres.",
+     	            "Error de Validación",
+     	            JOptionPane.ERROR_MESSAGE);
+     	        return false;
+         }
+         
+         if(txtApellido.getText().trim().length() < 2 || txtApellido.getText().trim().length() > 100) {
+        	 JOptionPane.showMessageDialog(this,
+     	            "El Apellido debe tener entre 2 y 100 caracteres.",
+     	            "Error de Validación",
+     	            JOptionPane.ERROR_MESSAGE);
+     	        return false;
+         }
+         
+         String telefono = txtTelefono.getText().trim();
+
+	      // Validar que tenga exactamente 10 dígitos numéricos
+	      if (!telefono.matches("\\d{10}")) {
+	          JOptionPane.showMessageDialog(this, 
+	                  "El teléfono debe contener exactamente 10 dígitos numéricos", 
+	                  "Error de Validación", 
+	                  JOptionPane.ERROR_MESSAGE);
+	          return false;
+	      }
+
+         
+        return true;
+    }
+    
     private void limpiarCampos() {
         txtId.setText("");
         txtNombre.setText("");

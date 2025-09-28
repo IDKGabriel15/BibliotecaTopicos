@@ -1,6 +1,8 @@
 package gUILayer;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 //import java.awt.event.KeyAdapter;
 //import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -27,6 +29,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 
     public GestionLibrosUI() {
         libroDAO = new LibroDAO();
+        
 
         JPanel panelFormulario = new JPanel(new GridLayout(5, 2, 10, 10));
         panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del Libro"));
@@ -47,9 +50,6 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         panelFormulario.add(new JLabel("Existencia:"));
         txtExistencia = new JTextField();
         panelFormulario.add(txtExistencia);
-        
-        
-      
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         btnGuardar = new JButton("Guardar");
@@ -60,7 +60,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         panelBotones.add(btnModificar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
-
+        
         String[] columnas = { "ID", "Título", "Autor", "Año","Existencia", "Disponibles"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
@@ -86,6 +86,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
             public void mouseClicked(MouseEvent e) {
                 int filaSeleccionada = tablaLibros.getSelectedRow();
                 if (filaSeleccionada >= 0) {
+                	btnGuardar.setVisible(false);
                     int idSeleccionado = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
                     Libro libroSeleccionado = buscarLibroPorId(idSeleccionado);
 
@@ -101,6 +102,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
             }
         });
         
+        configurarEnterParaGuardarModificar();
             
 
         // --- Contenedor Principal ---
@@ -337,6 +339,29 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 	
 	    return true;
     }
+    
+    //Método para asignar acción al presionar Enter
+    private void configurarEnterParaGuardarModificar() {
+        KeyAdapter enterAdapter = new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (txtId.getText().trim().isEmpty()) {
+                        guardarLibro();
+                    } else {
+                        modificarLibro();
+                    }
+                }
+            }
+        };
+
+        // Lo aplicamos a todos los campos
+        txtTitulo.addKeyListener(enterAdapter);
+        txtAutor.addKeyListener(enterAdapter);
+        txtAnio.addKeyListener(enterAdapter);
+        txtExistencia.addKeyListener(enterAdapter);
+    }
+
    
     private void limpiarCampos() {
         txtId.setText("");
@@ -344,6 +369,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         txtAutor.setText("");
         txtAnio.setText("");
         txtExistencia.setText("");
+        btnGuardar.setVisible(true);
         tablaLibros.clearSelection();
     }
 
