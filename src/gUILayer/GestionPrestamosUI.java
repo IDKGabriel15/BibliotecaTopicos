@@ -89,7 +89,7 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         cmbUsuarios.removeAllItems();
 
         for (Libro libro : listaLibros) {
-            if (libro.isDisponible()) {
+            if (calcularDisponibles(libro.getid()) > 0) {
                 cmbLibros.addItem(libro.getid() + " - " + libro.getTitulo());
             }
         }
@@ -99,15 +99,7 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
     }
 
     private void cargarDatosTabla() {
-        modeloTabla.setRowCount(0);
-        for (Prestamo prestamo : listaPrestamos) {
-            Libro libro = buscarLibroPorId(prestamo.getIdLibro());
-            Usuario usuario = buscarUsuarioPorId(prestamo.getIdUsuario());
-            String tituloLibro = (libro != null) ? libro.getTitulo() : "Libro eliminado";
-            String nombreUsuario = (usuario != null) ? usuario.getNombre() : "Usuario eliminado";
-            Object[] fila = { prestamo.getIdPrestamo(), tituloLibro, nombreUsuario, prestamo.getFechaPrestamo(), prestamo.getFechaDevolucion() };
-            modeloTabla.addRow(fila);
-        }
+        cargarDatosTabla("");
     }
 
     private void cargarDatosTabla(String busqueda) {
@@ -154,27 +146,27 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         int idLibroSeleccionado = obtenerIdDesdeComboBox(cmbLibros);
         int idUsuarioSeleccionado = obtenerIdDesdeComboBox(cmbUsuarios);
 
-        // Simular fecha actual
-        String fechaPrestamo = new java.text.SimpleDateFormat("dd/MM/yyyy").format(new java.util.Date());
-
-        // Actualizar el estado del libro a no disponible
-        Libro libro = buscarLibroPorId(idLibroSeleccionado);
-        if (libro != null) {
-            libro.setDisponible(false);
-            new LibroDAO().guardarTodos(listaLibros);
+        int disponibles = calcularDisponibles(idLibroSeleccionado);
+        if (disponibles <= 0) {
+            JOptionPane.showMessageDialog(this, "No hay ejemplares disponibles de este libro.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        String fechaPrestamo = new java.text.SimpleDateFormat("dd/MM/yyyy").format(new java.util.Date());
 
         Prestamo nuevoPrestamo = new Prestamo(generarNuevoId(), idLibroSeleccionado, idUsuarioSeleccionado, fechaPrestamo, "Pendiente");
         listaPrestamos.add(nuevoPrestamo);
         prestamoDAO.guardarTodos(listaPrestamos);
 
         cargarDatosTabla();
-        cargarComboBoxes(); // Actualiza el JComboBox de libros para reflejar el cambio de disponibilidad
+        cargarComboBoxes();
         limpiarCampos();
         JOptionPane.showMessageDialog(this, "Préstamo realizado exitosamente.", "Éxito",
                 JOptionPane.INFORMATION_MESSAGE);
     }
 
+    
     private void devolverLibro() {
         int filaSeleccionada = tablaPrestamos.getSelectedRow();
         if (filaSeleccionada < 0) {
@@ -185,23 +177,14 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
 
         int idPrestamoADevolver = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
         Prestamo prestamo = buscarPrestamoPorId(idPrestamoADevolver);
-        if (prestamo.getFechaDevolucion().equals("Pendiente")) {
-            int idLibroADevolver = prestamo.getIdLibro();
-            Libro libro = buscarLibroPorId(idLibroADevolver);
 
-            // Actualizar el estado del libro a disponible
-            if (libro != null) {
-                libro.setDisponible(true);
-                new LibroDAO().guardarTodos(listaLibros);
-            }
-
-            // Actualizar la fecha de devolución del préstamo
+        if ("Pendiente".equals(prestamo.getFechaDevolucion())) {
             String fechaDevolucion = new java.text.SimpleDateFormat("dd/MM/yyyy").format(new java.util.Date());
             prestamo.setFechaDevolucion(fechaDevolucion);
 
             prestamoDAO.guardarTodos(listaPrestamos);
             cargarDatosTabla();
-            cargarComboBoxes(); // Actualiza el JComboBox de libros
+            cargarComboBoxes();
             limpiarCampos();
             JOptionPane.showMessageDialog(this, "Libro devuelto exitosamente.", "Éxito",
                     JOptionPane.INFORMATION_MESSAGE);
@@ -254,6 +237,18 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         }
         return null;
     }
+    
+    private int calcularDisponibles(int idLibro) {
+        Libro libro = buscarLibroPorId(idLibro);
+        if (libro == null) return 0;
+
+        long prestados = listaPrestamos.stream()
+                .filter(p -> p.getIdLibro() == idLibro && "Pendiente".equals(p.getFechaDevolucion()))
+                .count();
+
+        return libro.getExistencia() - (int) prestados;
+    }
+
 
     private int generarNuevoId() {     
         if(listaPrestamos.isEmpty()) return 1;

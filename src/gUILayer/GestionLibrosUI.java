@@ -17,7 +17,7 @@ import DAO.PrestamoDAO;
 public class GestionLibrosUI extends JPanel implements Buscable {
 	private static final long serialVersionUID = 1L;
 	
-    private JTextField txtId, txtTitulo, txtAutor, txtAnio;
+    private JTextField txtId, txtTitulo, txtAutor, txtAnio, txtExistencia;
     private JButton btnGuardar, btnEliminar, btnModificar, btnLimpiar;
     private JTable tablaLibros;
     private DefaultTableModel modeloTabla;
@@ -44,6 +44,11 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         panelFormulario.add(new JLabel("Año de Publicación:"));
         txtAnio = new JTextField();
         panelFormulario.add(txtAnio);
+        panelFormulario.add(new JLabel("Existencia:"));
+        txtExistencia = new JTextField();
+        panelFormulario.add(txtExistencia);
+        
+        
       
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -56,7 +61,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
 
-        String[] columnas = { "ID", "Título", "Autor", "Año","Existencia", "Disponibles" };
+        String[] columnas = { "ID", "Título", "Autor", "Año","Existencia", "Disponibles"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
 
@@ -89,6 +94,8 @@ public class GestionLibrosUI extends JPanel implements Buscable {
                         txtTitulo.setText(libroSeleccionado.getTitulo());
                         txtAutor.setText(libroSeleccionado.getAutor());
                         txtAnio.setText(String.valueOf(libroSeleccionado.getAnioPublicacion()));
+                        txtExistencia.setText(String.valueOf(libroSeleccionado.getExistencia()));
+                        calcularDisponibles(idSeleccionado);
                     }
                 }
             }
@@ -159,9 +166,12 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     	if(!validarCampos()) return;
     	
         int anio = Integer.parseInt(txtAnio.getText().trim());
+        int existencia = Integer.parseInt(txtExistencia.getText().trim()); 
         int nuevoId = generarNuevoId();
 
-        Libro nuevoLibro = new Libro(nuevoId, txtTitulo.getText(), txtAutor.getText(), anio);
+        //MOVER ESTOO A DONDE CORRESPONDE
+        
+        Libro nuevoLibro = new Libro(nuevoId, txtTitulo.getText(), txtAutor.getText(), anio, existencia);
         listaLibros.add(nuevoLibro);
         libroDAO.guardarTodos(listaLibros);
 
@@ -180,16 +190,38 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         }
 
         int idModificar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
+
+        this.listaLibros = libroDAO.obtenerTodos();
+        List<Prestamo> prestamos = new PrestamoDAO().obtenerTodos();
+
         Libro libroExistente = buscarLibroPorId(idModificar);
+        if (libroExistente == null) {
+            JOptionPane.showMessageDialog(this, "No se encontró el libro seleccionado.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        if(!validarCampos()) return;
+        if (!validarCampos()) return;
 
-        int anio = Integer.parseInt(txtAnio.getText());
+        int anio = Integer.parseInt(txtAnio.getText().trim());
+        int existencia = Integer.parseInt(txtExistencia.getText().trim());
 
+        // Calcular prestados reales consultando préstamos pendientes
+        long prestados = prestamos.stream()
+            .filter(p -> p.getIdLibro() == idModificar && "Pendiente".equals(p.getFechaDevolucion()))
+            .count();
+
+        if (existencia < prestados) {
+            JOptionPane.showMessageDialog(this, "La existencia debe ser mayor o igual a los prestados actuales (" + prestados + ").",
+                "Error de Validación", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        	
         libroExistente.setTitulo(txtTitulo.getText());
         libroExistente.setAutor(txtAutor.getText());
         libroExistente.setAnioPublicacion(anio);
-
+        libroExistente.setExistencia(existencia);
+        
+        
         libroDAO.guardarTodos(listaLibros);
         cargarDatosTabla();
         limpiarCampos();
@@ -211,7 +243,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
             int idAEliminar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
             Libro libroAEliminar = buscarLibroPorId(idAEliminar);
 
-            if(!libroAEliminar.isDisponible()) {
+            if(calcularDisponibles(idAEliminar) < libroAEliminar.getExistencia()) {
                 JOptionPane.showMessageDialog(this,
                     "No es posible eliminar el libro porque no está disponible.",
                     "Error",
@@ -286,6 +318,22 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 	            JOptionPane.ERROR_MESSAGE);
 	        return false;
 	    }
+	    
+	    int existencia; 
+	    try {
+	    	existencia  = Integer.parseInt(txtExistencia.getText().trim());
+	    	if(existencia <= 0) {
+	    		JOptionPane.showMessageDialog(this, 
+	    	            "La existencia debe ser mayor a 0", 
+	    	            "Error de Validación", 
+	    	            JOptionPane.ERROR_MESSAGE);
+	    		return false; 
+	    	}
+	    }catch (NumberFormatException ex) {
+	    	JOptionPane.showMessageDialog(this, "La existencía debe ser un número válido", "Error en el formato", JOptionPane.ERROR_MESSAGE);
+	    	return false;
+	    }
+	    
 	
 	    return true;
     }
@@ -295,6 +343,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         txtTitulo.setText("");
         txtAutor.setText("");
         txtAnio.setText("");
+        txtExistencia.setText("");
         tablaLibros.clearSelection();
     }
 
