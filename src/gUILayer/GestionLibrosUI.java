@@ -120,7 +120,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         modeloTabla.setRowCount(0);
         listaLibros.stream()
             .filter(libro -> busqueda.isEmpty() || 
-                (libro.getTitulo() + libro.getAutor() + libro.getAnioPublicacion())
+                (libro.getid() + libro.getTitulo() + libro.getAutor() + libro.getAnioPublicacion() + libro.getExistencia() + libro.getExistencia())
                     .toLowerCase()
                     .contains(busqueda.toLowerCase()))
             .forEach(libro -> modeloTabla.addRow(new Object[] {
@@ -340,7 +340,6 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 	    return true;
     }
     
-    //Método para asignar acción al presionar Enter
     private void configurarEnterParaGuardarModificar() {
         KeyAdapter enterAdapter = new KeyAdapter() {
             @Override

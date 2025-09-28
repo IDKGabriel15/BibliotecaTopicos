@@ -3,6 +3,8 @@ package gUILayer;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 //import java.awt.event.KeyAdapter;
@@ -76,8 +78,8 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
             public void mouseClicked(MouseEvent e) {
                 int filaSeleccionada = tablaUsuarios.getSelectedRow();
                 if (filaSeleccionada >= 0) {
-                    // Ahora se lee el ID como un entero
-                    int idSeleccionado = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
+                	btnGuardar.setVisible(false);
+                	int idSeleccionado = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
                     Usuario usuarioSeleccionado = buscarUsuarioPorId(idSeleccionado);
 
                     if (usuarioSeleccionado != null) {
@@ -89,6 +91,8 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
                 }
             }
         });
+        
+        configurarEnterParaGuardarModificar();
 
         setLayout(new BorderLayout(10, 10));
         add(panelFormulario, BorderLayout.NORTH);
@@ -249,7 +253,29 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
         txtNombre.setText("");
         txtApellido.setText("");
         txtTelefono.setText("");
+        btnGuardar.setVisible(true);
         tablaUsuarios.clearSelection();
+    }
+    
+
+    private void configurarEnterParaGuardarModificar() {
+        KeyAdapter enterAdapter = new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (txtId.getText().trim().isEmpty()) {
+                        guardarUsuario();;
+                    } else {
+                        modificarUsuario();
+                    }
+                }
+            }
+        };
+
+        // Lo aplicamos a todos los campos
+        txtNombre.addKeyListener(enterAdapter);
+        txtApellido.addKeyListener(enterAdapter);
+        txtTelefono.addKeyListener(enterAdapter);
     }
 
     private Usuario buscarUsuarioPorId(int id) {

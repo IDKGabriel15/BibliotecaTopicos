@@ -1,6 +1,9 @@
 package gUILayer;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.Date;
 //import java.awt.event.KeyAdapter;
 //import java.awt.event.KeyEvent;
 import java.util.List;
@@ -17,6 +20,7 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
 	private JComboBox<String> cmbLibros;
     private JComboBox<String> cmbUsuarios;
     private JButton btnPrestar, btnDevolver, btnLimpiar;
+    private JSpinner spinnerFecha;
     private JTable tablaPrestamos;
     private DefaultTableModel modeloTabla;
 
@@ -45,6 +49,12 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         panelFormulario.add(new JLabel("Seleccionar Usuario:"));
         cmbUsuarios = new JComboBox<>();
         panelFormulario.add(cmbUsuarios);
+        panelFormulario.add(new JLabel("Fecha de Entrega:"));
+        spinnerFecha = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinnerFecha, "dd/MM/yyyy");
+        spinnerFecha.setEditor(editor);
+        panelFormulario.add(spinnerFecha);
+
         
 
         cargarComboBoxes();
@@ -57,7 +67,7 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         panelBotones.add(btnDevolver);
         panelBotones.add(btnLimpiar);
 
-        String[] columnas = { "ID Préstamo", "Libro", "Usuario", "Fecha Préstamo", "Fecha Devolución" };
+        String[] columnas = { "ID Préstamo", "Libro", "Usuario", "Fecha Préstamo", "Fecha Entrega", "Fecha Devolución" };
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
 
@@ -76,6 +86,18 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         btnPrestar.addActionListener(e -> prestarLibro());
         btnDevolver.addActionListener(e -> devolverLibro());
         btnLimpiar.addActionListener(e-> limpiarCampos());
+
+        
+        spinnerFecha.setEditor(editor);
+        JFormattedTextField textField = editor.getTextField();
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    prestarLibro();
+                }
+            }
+        });
 
         // --- Contenedor Principal ---
         setLayout(new BorderLayout(10, 10));
@@ -107,7 +129,7 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         for (Prestamo prestamo : listaPrestamos) {
             Libro libro = buscarLibroPorId(prestamo.getIdLibro());
             Usuario usuario = buscarUsuarioPorId(prestamo.getIdUsuario());
-            Object[] fila = { prestamo.getIdPrestamo(), libro.getTitulo(), usuario.getNombre(), prestamo.getFechaPrestamo(), prestamo.getFechaDevolucion()};
+            Object[] fila = { prestamo.getIdPrestamo(), libro.getTitulo(), usuario.getNombre(), prestamo.getFechaPrestamo(), prestamo.getFechaEntregaFormateada(), prestamo.getFechaDevolucion()};
             for(Object elemento : fila){
                 if(elemento != null && elemento.toString().toLowerCase().contains(busqueda.toLowerCase())){
                     modeloTabla.addRow(fila);
@@ -154,8 +176,17 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         }
 
         String fechaPrestamo = new java.text.SimpleDateFormat("dd/MM/yyyy").format(new java.util.Date());
+        Date fechaEntrega = (Date) spinnerFecha.getValue();
+        Date hoy = new Date();
 
-        Prestamo nuevoPrestamo = new Prestamo(generarNuevoId(), idLibroSeleccionado, idUsuarioSeleccionado, fechaPrestamo, "Pendiente");
+        if (!fechaEntrega.after(hoy)) {
+            JOptionPane.showMessageDialog(this, "La fecha de entrega debe ser mayor a la fecha actual.", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+
+        Prestamo nuevoPrestamo = new Prestamo(generarNuevoId(), idLibroSeleccionado, idUsuarioSeleccionado, fechaPrestamo, fechaEntrega,"Pendiente");
         listaPrestamos.add(nuevoPrestamo);
         prestamoDAO.guardarTodos(listaPrestamos);
 
@@ -197,7 +228,9 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
     private void limpiarCampos() {
         cmbLibros.setSelectedIndex(-1);
         cmbUsuarios.setSelectedIndex(-1);
+        spinnerFecha.setValue(new Date());
         tablaPrestamos.clearSelection();
+
     }
 
     // --- Métodos de Utilidad ---
