@@ -103,7 +103,9 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         for (Prestamo prestamo : listaPrestamos) {
             Libro libro = buscarLibroPorId(prestamo.getIdLibro());
             Usuario usuario = buscarUsuarioPorId(prestamo.getIdUsuario());
-            Object[] fila = { prestamo.getIdPrestamo(), libro.getTitulo(), usuario.getNombre(), prestamo.getFechaPrestamo(), prestamo.getFechaDevolucion() };
+            String tituloLibro = (libro != null) ? libro.getTitulo() : "Libro eliminado";
+            String nombreUsuario = (usuario != null) ? usuario.getNombre() : "Usuario eliminado";
+            Object[] fila = { prestamo.getIdPrestamo(), tituloLibro, nombreUsuario, prestamo.getFechaPrestamo(), prestamo.getFechaDevolucion() };
             modeloTabla.addRow(fila);
         }
     }

@@ -10,7 +10,9 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import entidades.Libro;
+import entidades.Prestamo;
 import DAO.LibroDAO;
+import DAO.PrestamoDAO;
 
 public class GestionLibrosUI extends JPanel implements Buscable {
 	private static final long serialVersionUID = 1L;
@@ -21,6 +23,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     private DefaultTableModel modeloTabla;
     private LibroDAO libroDAO;
     private List<Libro> listaLibros;
+    
 
     public GestionLibrosUI() {
         libroDAO = new LibroDAO();
@@ -53,7 +56,7 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
 
-        String[] columnas = { "ID", "Título", "Autor", "Año", "Disponible" };
+        String[] columnas = { "ID", "Título", "Autor", "Año","Existencia", "Disponibles" };
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
 
@@ -90,6 +93,8 @@ public class GestionLibrosUI extends JPanel implements Buscable {
                 }
             }
         });
+        
+            
 
         // --- Contenedor Principal ---
         setLayout(new BorderLayout(10, 10));
@@ -110,8 +115,8 @@ public class GestionLibrosUI extends JPanel implements Buscable {
                     .toLowerCase()
                     .contains(busqueda.toLowerCase()))
             .forEach(libro -> modeloTabla.addRow(new Object[] {
-                libro.getid(), libro.getTitulo(), libro.getAutor(), libro.getAnioPublicacion(),
-                libro.isDisponible() ? "Sí" : "No"
+                libro.getid(), libro.getTitulo(), libro.getAutor(), libro.getAnioPublicacion(), 
+                libro.getExistencia(),calcularDisponibles(libro.getid())
             }));
     }
 
@@ -128,18 +133,20 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     }
 
     private void guardarLibro() {
-    	
-    	
     	for (Libro libro : listaLibros) {
-	        if (libro.getTitulo().equalsIgnoreCase(txtTitulo.getText().trim()) &&
-	            libro.getAutor().equalsIgnoreCase(txtAutor.getText().trim())) {
-	            JOptionPane.showMessageDialog(this,
-	                "Ya existe un libro con el mismo título y autor.",
-	                "Duplicado",
-	                JOptionPane.ERROR_MESSAGE);
-	            return;
-	        }
-	    }
+    	    if (libro.getTitulo().equalsIgnoreCase(txtTitulo.getText().trim()) &&
+    	        libro.getAutor().equalsIgnoreCase(txtAutor.getText().trim())) {
+    	        libro.setExistencia(libro.getExistencia() + 1);
+    	        libroDAO.guardarTodos(listaLibros);
+    	        cargarDatosTabla();
+    	        limpiarCampos();
+    	        JOptionPane.showMessageDialog(this, 
+    	            "Se ha agregado otro ejemplar de este título.", 
+    	            "Éxito", 
+    	            JOptionPane.INFORMATION_MESSAGE);
+    	        return;
+    	    }
+    	}
     	
     	if (!txtId.getText().isEmpty()) {
 	        JOptionPane.showMessageDialog(this, 
@@ -296,6 +303,22 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         return listaLibros.get(listaLibros.size()-1).getid() + 1;
     }
 
+
+    private int calcularDisponibles(int idLibro) {
+    	PrestamoDAO prestamoDAO = new PrestamoDAO();
+        List<Prestamo> prestamos = prestamoDAO.obtenerTodos();
+
+        //Libros prestados siguen pendientes de devolución
+        long prestados = prestamos.stream()
+                .filter(p -> p.getIdLibro() == idLibro && "Pendiente".equals(p.getFechaDevolucion()))
+                .count();
+
+        Libro libro = buscarLibroPorId(idLibro);
+        if (libro == null) return 0;
+        int disponibles = libro.getExistencia() - (int) prestados;
+        return Math.max(disponibles, 0);
+    } 
+    
     private Libro buscarLibroPorId(int id) {
         for (Libro libro : listaLibros) {
             if (libro.getid() == id) {

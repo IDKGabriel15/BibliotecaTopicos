@@ -10,14 +10,15 @@ public class Libro implements Serializable {
     private String titulo;
     private String autor;
     private int anioPublicacion;
+    private int existencia;
     private boolean disponible;
-
     
     public Libro(int id, String titulo, String autor, int anioPublicacion) {
         this.id = id;
         this.titulo = titulo;
         this.autor = autor;
         this.anioPublicacion = anioPublicacion;
+        this.existencia = 1; 
         this.disponible = true; 
     }
 
@@ -35,6 +36,10 @@ public class Libro implements Serializable {
 
     public int getAnioPublicacion() {
         return anioPublicacion;
+    }
+    
+    public int getExistencia() {
+        return existencia;
     }
 
     public boolean isDisponible() {
@@ -57,9 +62,15 @@ public class Libro implements Serializable {
         this.anioPublicacion = anioPublicacion;
     }
 
+    public void setExistencia(int existencia) {
+        this.existencia = existencia;
+    }
+    
     public void setDisponible(boolean disponible) {
         this.disponible = disponible;
     }
+    
+ 
 
     @Override
     public String toString() {
