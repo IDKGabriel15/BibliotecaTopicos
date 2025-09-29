@@ -79,7 +79,7 @@ public class App extends JFrame {
         //MENÚ "PERFIL"
         JMenu menuArchivo = new JMenu("Perfil");
         JMenuItem itemSalir = new JMenuItem("Cerrar sesión");
-        itemSalir.addActionListener(_ -> System.exit(0));
+        itemSalir.addActionListener(e -> System.exit(0));
         menuArchivo.add(itemSalir);
 
         //MENÚ "GESTIÓN"
@@ -94,7 +94,7 @@ public class App extends JFrame {
         //MENÚ "AYUDA"
         JMenu menuAyuda = new JMenu("Ayuda");
         JMenuItem itemAcercaDe = new JMenuItem("Acerca de...");
-        itemAcercaDe.addActionListener(_ -> JOptionPane.showMessageDialog(this,
+        itemAcercaDe.addActionListener(e -> JOptionPane.showMessageDialog(this,
                 "Sistema de Control Bibliotecario v1.0\nDesarrollado por PROYECTO TOPICOS",
                 "Acerca de",
                 JOptionPane.INFORMATION_MESSAGE));
@@ -107,9 +107,9 @@ public class App extends JFrame {
         setJMenuBar(menuBar);
 
         //ASIGNA LAS ACCIONES A LOS ITEMS DEL MENÚ PARA CAMBIAR DE PANEL.
-        itemLibros.addActionListener(_ -> mostrarPanel(LIBROS));
-        itemUsuarios.addActionListener(_ -> mostrarPanel(USUARIOS));
-        itemPrestamos.addActionListener(_ -> mostrarPanel(PRESTAMOS));
+        itemLibros.addActionListener(e -> mostrarPanel(LIBROS));
+        itemUsuarios.addActionListener(e -> mostrarPanel(USUARIOS));
+        itemPrestamos.addActionListener(e -> mostrarPanel(PRESTAMOS));
     }
 
     //CREA Y CONFIGURA LA BARRA DE HERRAMIENTAS CON BOTONES DE ACCESO RÁPIDO.
@@ -138,7 +138,7 @@ public class App extends JFrame {
         });
 
         //EL BOTÓN BUSCAR MUESTRA U OCULTA EL CAMPO DE BÚSQUEDA.
-        btnBuscar.addActionListener(_ -> toggleBusqueda());
+        btnBuscar.addActionListener(e -> toggleBusqueda());
 
         //SE AÑADEN LOS COMPONENTES A LA BARRA DE HERRAMIENTAS.
         toolBar.add(btnLibros);
@@ -157,7 +157,7 @@ public class App extends JFrame {
         boton.setToolTipText("Gestión " + texto);
         boton.setBorderPainted(false); //QUITAR BORDE PARA UN ASPECTO MÁS LIMPIO.
         if (panel != null) {
-            boton.addActionListener(_ -> mostrarPanel(panel));
+            boton.addActionListener(e -> mostrarPanel(panel));
         }
         return boton;
     }

@@ -115,10 +115,10 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
 
     //ASIGNA LAS ACCIONES A LOS BOTONES Y A LA SELECCIÓN EN LA TABLA.
     private void configurarEventos() {
-        btnGuardar.addActionListener(_ -> guardarUsuario());
-        btnModificar.addActionListener(_ -> modificarUsuario());
-        btnEliminar.addActionListener(_ -> eliminarUsuario());
-        btnLimpiar.addActionListener(_ -> limpiarCampos());
+        btnGuardar.addActionListener(e -> guardarUsuario());
+        btnModificar.addActionListener(e -> modificarUsuario());
+        btnEliminar.addActionListener(e -> eliminarUsuario());
+        btnLimpiar.addActionListener(e -> limpiarCampos());
 
         //EVENTO PARA CARGAR LOS DATOS EN EL FORMULARIO AL HACER CLIC EN UNA FILA DE LA TABLA.
         tablaUsuarios.addMouseListener(new MouseAdapter() {

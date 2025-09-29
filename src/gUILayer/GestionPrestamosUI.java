@@ -126,9 +126,9 @@ public class GestionPrestamosUI extends JPanel implements Buscable {
         btnDevolver = new JButton("Devolver Libro");
         btnLimpiar = new JButton("Limpiar");
 
-        btnPrestar.addActionListener(_ -> prestarLibro());
-        btnDevolver.addActionListener(_ -> devolverLibro());
-        btnLimpiar.addActionListener(_ -> limpiarCampos());
+        btnPrestar.addActionListener(e -> prestarLibro());
+        btnDevolver.addActionListener(e -> devolverLibro());
+        btnLimpiar.addActionListener(e -> limpiarCampos());
 
         panelBotones.add(btnPrestar);
         panelBotones.add(btnDevolver);

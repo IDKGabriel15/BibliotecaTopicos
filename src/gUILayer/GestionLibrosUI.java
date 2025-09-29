@@ -105,10 +105,10 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         btnEliminar = new JButton("Eliminar");
         btnLimpiar = new JButton("Limpiar");
 
-        btnGuardar.addActionListener(_ -> guardarLibro());
-        btnModificar.addActionListener(_ -> modificarLibro());
-        btnEliminar.addActionListener(_ -> eliminarLibro());
-        btnLimpiar.addActionListener(_ -> limpiarCampos());
+        btnGuardar.addActionListener(e -> guardarLibro());
+        btnModificar.addActionListener(e -> modificarLibro());
+        btnEliminar.addActionListener(e -> eliminarLibro());
+        btnLimpiar.addActionListener(e -> limpiarCampos());
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnModificar);
