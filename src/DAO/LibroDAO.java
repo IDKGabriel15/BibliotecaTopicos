@@ -12,7 +12,6 @@ public class LibroDAO {
     public void guardarTodos(List<Libro> libros) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(NOMBRE_ARCHIVO))) {
             oos.writeObject(libros);
-            System.out.println("Libros guardados en " + NOMBRE_ARCHIVO);
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Error al guardar los libros.");

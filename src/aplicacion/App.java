@@ -3,90 +3,129 @@ package aplicacion;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-
 import javax.swing.*;
 import gUILayer.*;
 
 public class App extends JFrame {
-	private static final long serialVersionUID = 1L;
-	private JPanel panelPrincipal;
+
+    private static final long serialVersionUID = 1L;
+
+    // CONSTANTES PARA EL CARDLAYOUT
+    private static final String LIBROS = "LIBROS";
+    private static final String USUARIOS = "USUARIOS";
+    private static final String PRESTAMOS = "PRESTAMOS";
+
+    private JPanel panelPrincipal;
     private CardLayout cardLayout;
     private JToolBar toolBar;
     private JMenuBar menuBar;
     private GestionLibrosUI panelLibros;
     private GestionUsuariosUI panelUsuarios;
     private GestionPrestamosUI panelPrestamos;
-    private Buscable panelActivo;
-    
-    
+    private Buscable panelActual;
+    private JTextField campoBusqueda;
+    private boolean buscando = false;
+
     public App() {
+        configurarVentana();
+        inicializarComponentes();
+        setIconImage(new ImageIcon("assets/book.png").getImage());
+        cardLayout.show(panelPrincipal, LIBROS);
+    }
+
+    private void configurarVentana() {
         setTitle("Sistema de Control Bibliotecario");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+    }
 
+    private void inicializarComponentes() {
+        crearMenu();
+        crearToolBar();
+        crearPaneles();
+    }
+
+    private void crearMenu() {
         menuBar = new JMenuBar();
 
-        JMenu menuArchivo = new JMenu("Archivo");
-        JMenuItem itemSalir = new JMenuItem("Salir");
+        JMenu menuArchivo = new JMenu("Perfil");
+        JMenuItem itemSalir = new JMenuItem("Cerrar sesión");
+        itemSalir.addActionListener(e -> System.exit(0));
         menuArchivo.add(itemSalir);
 
         JMenu menuGestion = new JMenu("Gestión");
-        JMenuItem itemGestionLibros = new JMenuItem("Gestión de Libros");
-        JMenuItem itemGestionUsuarios = new JMenuItem("Gestión de Usuarios");
-        JMenuItem itemGestionPrestamos = new JMenuItem("Gestión de Préstamos");
-        menuGestion.add(itemGestionLibros);
-        menuGestion.add(itemGestionUsuarios);
-        menuGestion.add(itemGestionPrestamos);
+        JMenuItem itemLibros = new JMenuItem("Gestión de Libros");
+        JMenuItem itemUsuarios = new JMenuItem("Gestión de Usuarios");
+        JMenuItem itemPrestamos = new JMenuItem("Gestión de Préstamos");
+        menuGestion.add(itemLibros);
+        menuGestion.add(itemUsuarios);
+        menuGestion.add(itemPrestamos);
 
         JMenu menuAyuda = new JMenu("Ayuda");
         JMenuItem itemAcercaDe = new JMenuItem("Acerca de...");
+        itemAcercaDe.addActionListener(e -> JOptionPane.showMessageDialog(this,
+                "Sistema de Control Bibliotecario v1.0\nDesarrollado por PROYECTO TOPICOS",
+                "Acerca de",
+                JOptionPane.INFORMATION_MESSAGE));
         menuAyuda.add(itemAcercaDe);
 
         menuBar.add(menuArchivo);
         menuBar.add(menuGestion);
         menuBar.add(menuAyuda);
+
         setJMenuBar(menuBar);
 
+        // Acciones del menú
+        itemLibros.addActionListener(e -> mostrarPanel(LIBROS));
+        itemUsuarios.addActionListener(e -> mostrarPanel(USUARIOS));
+        itemPrestamos.addActionListener(e -> mostrarPanel(PRESTAMOS));
+    }
+
+    private void crearToolBar() {
         toolBar = new JToolBar("Navegación");
         toolBar.setFloatable(false);
-        add(toolBar, BorderLayout.NORTH);
 
-        ImageIcon iconoLibros = new ImageIcon("assets/libros.png");
-        ImageIcon iconoUsuarios = new ImageIcon("assets/usuarios.png");
-        ImageIcon iconoPrestamos = new ImageIcon("assets/prestamos.png");
-        ImageIcon iconoBuscar = new ImageIcon("assets/buscar.png");
+        JButton btnLibros = crearBoton("Libros", "assets/libros.png", LIBROS);
+        JButton btnUsuarios = crearBoton("Usuarios", "assets/usuarios.png", USUARIOS);
+        JButton btnPrestamos = crearBoton("Prestamos", "assets/prestamos.png", PRESTAMOS);
+        JButton btnBuscar = crearBoton("Buscar", "assets/buscar.png", null);
 
-        JButton btnLibros = new JButton("Libros", iconoLibros);
-        btnLibros.setToolTipText("Gestión Libros");
-        btnLibros.setBorderPainted(false);
-        JButton btnUsuarios = new JButton("Usuarios",iconoUsuarios);
-        btnUsuarios.setToolTipText("Gestión Usuarios");
-        btnUsuarios.setBorderPainted(false);
-        JButton btnPrestamos = new JButton("Prestamos",iconoPrestamos);
-        btnPrestamos.setToolTipText("Gestión Préstamos");
-        btnPrestamos.setBorderPainted(false);
-        
-        JButton btnBuscar = new JButton("Buscar", iconoBuscar);
-        btnBuscar.setToolTipText("Buscar");
-        btnBuscar.setBorderPainted(false);
-        
-        //CAMPO DE TEXTO PARA BUSCAR
-        JTextField txtBuscar = new JTextField(15);
-        txtBuscar.setMaximumSize(txtBuscar.getPreferredSize()); 
-        txtBuscar.setVisible(false);
-        
-        
+        campoBusqueda = new JTextField(15);
+        campoBusqueda.setMaximumSize(campoBusqueda.getPreferredSize());
+        campoBusqueda.setVisible(false);
+        campoBusqueda.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (panelActual != null) {
+                    panelActual.buscar(campoBusqueda.getText().trim());
+                }
+            }
+        });
+
+        btnBuscar.addActionListener(e -> toggleBusqueda());
+
         toolBar.add(btnLibros);
         toolBar.add(btnUsuarios);
         toolBar.add(btnPrestamos);
         toolBar.add(Box.createHorizontalGlue());
         toolBar.add(btnBuscar);
-        toolBar.add(txtBuscar);
+        toolBar.add(campoBusqueda);
 
-        final boolean[] buscando = {false};
+        add(toolBar, BorderLayout.NORTH);
+    }
 
-        
+    private JButton crearBoton(String texto, String rutaIcono, String panel) {
+        JButton boton = new JButton(texto, new ImageIcon(rutaIcono));
+        boton.setToolTipText("Gestión " + texto);
+        boton.setBorderPainted(false);
+        if (panel != null) {
+            boton.addActionListener(e -> mostrarPanel(panel));
+        }
+        return boton;
+    }
+
+    private void crearPaneles() {
         cardLayout = new CardLayout();
         panelPrincipal = new JPanel(cardLayout);
 
@@ -94,65 +133,40 @@ public class App extends JFrame {
         panelUsuarios = new GestionUsuariosUI();
         panelPrestamos = new GestionPrestamosUI();
 
-        panelActivo = panelLibros;
-        		
-        panelPrincipal.add(panelLibros, "LIBROS");
-        panelPrincipal.add(panelUsuarios, "USUARIOS");
-        panelPrincipal.add(panelPrestamos, "PRESTAMOS");
+        panelPrincipal.add(panelLibros, LIBROS);
+        panelPrincipal.add(panelUsuarios, USUARIOS);
+        panelPrincipal.add(panelPrestamos, PRESTAMOS);
+
+        panelActual = panelLibros;
 
         add(panelPrincipal, BorderLayout.CENTER);
+    }
 
-        btnLibros.addActionListener(e-> {
-            panelLibros.actualizarDatos();
-            cardLayout.show(panelPrincipal, "LIBROS");
-            panelActivo = panelLibros;
-        });
+    private void mostrarPanel(String nombre) {
+        switch (nombre) {
+            case LIBROS -> panelLibros.actualizarDatos();
+            case USUARIOS -> panelUsuarios.actualizarDatos();
+            case PRESTAMOS -> panelPrestamos.actualizarDatos();
+        }
 
-        btnUsuarios.addActionListener(e-> {
-            panelUsuarios.actualizarDatos();
-            cardLayout.show(panelPrincipal, "USUARIOS");
-            panelActivo = panelUsuarios;
-        });
+        panelActual = switch (nombre) {
+            case LIBROS -> panelLibros;
+            case USUARIOS -> panelUsuarios;
+            case PRESTAMOS -> panelPrestamos;
+            default -> panelActual;
+        };
 
-        btnPrestamos.addActionListener(e-> {
-            panelPrestamos.actualizarDatos();
-            cardLayout.show(panelPrincipal, "PRESTAMOS");
-            panelActivo = panelPrestamos;
-        });
+        cardLayout.show(panelPrincipal, nombre);
+    }
 
-        btnBuscar.addActionListener(e -> {
-        	buscando[0] = !buscando[0]; 
-            txtBuscar.setVisible(buscando[0]);
-            toolBar.revalidate(); 
-            toolBar.repaint();
-            
-            if (buscando[0]) txtBuscar.requestFocusInWindow(); 
-            else txtBuscar.setText(""); 
-            
-        });
-        
-        txtBuscar.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                if (panelActivo != null) {
-                    String criterio = txtBuscar.getText().trim();
-                    panelActivo.buscar(criterio);
-                }
-            }
-        });
+    private void toggleBusqueda() {
+        buscando = !buscando;
+        campoBusqueda.setVisible(buscando);
+        if (buscando) campoBusqueda.requestFocusInWindow();
+        else campoBusqueda.setText("");
 
-        
-        
-        itemGestionLibros.addActionListener(e-> cardLayout.show(panelPrincipal, "LIBROS"));
-        itemGestionUsuarios.addActionListener(e -> cardLayout.show(panelPrincipal, "USUARIOS"));
-        itemGestionPrestamos.addActionListener(e-> cardLayout.show(panelPrincipal, "PRESTAMOS"));
-
-        itemSalir.addActionListener(e->System.exit(0));
-        itemAcercaDe.addActionListener(e-> JOptionPane.showMessageDialog(this,
-                "Sistema de Control Bibliotecario v1.0\nDesarrollado por PROYECTO TOPICOS", "Acerca de",
-                JOptionPane.INFORMATION_MESSAGE));
-
-        cardLayout.show(panelPrincipal, "LIBROS");
+        toolBar.revalidate();
+        toolBar.repaint();
     }
 
     public static void main(String[] args) {

@@ -3,117 +3,165 @@ package gUILayer;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-//import java.awt.event.KeyAdapter;
-//import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.util.List;
 import entidades.Usuario;
 import DAO.UsuarioDAO;
 
-
 public class GestionUsuariosUI extends JPanel implements Buscable {
-	private static final long serialVersionUID = 1L;
-	
+    private static final long serialVersionUID = 1L;
+
+    // Campos de formulario
     private JTextField txtId, txtNombre, txtApellido, txtTelefono;
+
+    // Botones
     private JButton btnGuardar, btnEliminar, btnModificar, btnLimpiar;
+
+    // Tabla
     private JTable tablaUsuarios;
     private DefaultTableModel modeloTabla;
+
+    // DAO y lista
     private UsuarioDAO usuarioDAO;
     private List<Usuario> listaUsuarios;
 
     public GestionUsuariosUI() {
         usuarioDAO = new UsuarioDAO();
 
-        JPanel panelFormulario = new JPanel(new GridLayout(5, 2, 10, 10));
+        setLayout(new BorderLayout(10, 10));
+
+        initFormulario();
+        JPanel panelFormulario = initPanelFormulario();
+        JPanel panelBotones = initPanelBotones();
+        JScrollPane panelTabla = initTabla();
+
+        add(panelFormulario, BorderLayout.NORTH);
+        add(panelTabla, BorderLayout.CENTER);
+        add(panelBotones, BorderLayout.SOUTH);
+
+        // Eventos
+        configurarEventos();
+        configurarEnterParaGuardarModificar();
+
+        // Cargar datos iniciales
+        actualizarDatos();
+    }
+
+    /* ---------- Inicialización de componentes ---------- */
+
+    private void initFormulario() {
+        txtId = new JTextField(5);
+        txtId.setEditable(false);
+        txtNombre = new JTextField(20);
+        txtApellido = new JTextField(20);
+        txtTelefono = new JTextField(10);
+    }
+
+    private JPanel initPanelFormulario() {
+        JPanel panelFormulario = new JPanel(new GridLayout(4, 2, 10, 10));
         panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del Usuario"));
 
         panelFormulario.add(new JLabel("ID Usuario (Generado):"));
-        txtId = new JTextField();
-        txtId.setEditable(false); 
         panelFormulario.add(txtId);
+
         panelFormulario.add(new JLabel("Nombre:"));
-        txtNombre = new JTextField();
         panelFormulario.add(txtNombre);
+
         panelFormulario.add(new JLabel("Apellido:"));
-        txtApellido = new JTextField();
         panelFormulario.add(txtApellido);
+
         panelFormulario.add(new JLabel("Teléfono:"));
-        txtTelefono = new JTextField();
         panelFormulario.add(txtTelefono);
 
-        // --- Panel de Botones ---
+        return panelFormulario;
+    }
+
+    private JPanel initPanelBotones() {
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         btnGuardar = new JButton("Guardar");
         btnModificar = new JButton("Modificar");
         btnEliminar = new JButton("Eliminar");
-        btnLimpiar = new JButton("Limpiar Campos");
+        btnLimpiar = new JButton("Limpiar");
+
         panelBotones.add(btnGuardar);
         panelBotones.add(btnModificar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
 
+        return panelBotones;
+    }
+
+    private JScrollPane initTabla() {
         String[] columnas = { "ID", "Nombre", "Apellido", "Teléfono" };
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            @Override public boolean isCellEditable(int row, int col) { return false; }
         };
+
         tablaUsuarios = new JTable(modeloTabla);
-        JScrollPane scrollPane = new JScrollPane(tablaUsuarios);
+        return new JScrollPane(tablaUsuarios);
+    }
 
-        this.actualizarDatos();
-        cargarDatosTabla();
+    /* ---------- Eventos ---------- */
 
-        btnGuardar.addActionListener(e-> guardarUsuario());
+    private void configurarEventos() {
+        btnGuardar.addActionListener(e -> guardarUsuario());
         btnModificar.addActionListener(e -> modificarUsuario());
-        btnEliminar.addActionListener(e-> eliminarUsuario());
-        btnLimpiar.addActionListener(e-> limpiarCampos());
+        btnEliminar.addActionListener(e -> eliminarUsuario());
+        btnLimpiar.addActionListener(e -> limpiarCampos());
 
         tablaUsuarios.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                int filaSeleccionada = tablaUsuarios.getSelectedRow();
-                if (filaSeleccionada >= 0) {
-                	btnGuardar.setVisible(false);
-                	int idSeleccionado = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
-                    Usuario usuarioSeleccionado = buscarUsuarioPorId(idSeleccionado);
-
-                    if (usuarioSeleccionado != null) {
-                        txtId.setText(String.valueOf(usuarioSeleccionado.getIdUsuario()));
-                        txtNombre.setText(usuarioSeleccionado.getNombre());
-                        txtApellido.setText(usuarioSeleccionado.getApellido());
-                        txtTelefono.setText(usuarioSeleccionado.getTelefono());
+                int fila = tablaUsuarios.getSelectedRow();
+                if (fila >= 0) {
+                    btnGuardar.setVisible(false);
+                    int idSeleccionado = (int) modeloTabla.getValueAt(fila, 0);
+                    Usuario u = buscarUsuarioPorId(idSeleccionado);
+                    if (u != null) {
+                        txtId.setText(String.valueOf(u.getIdUsuario()));
+                        txtNombre.setText(u.getNombre());
+                        txtApellido.setText(u.getApellido());
+                        txtTelefono.setText(u.getTelefono());
                     }
                 }
             }
         });
-        
-        configurarEnterParaGuardarModificar();
-
-        setLayout(new BorderLayout(10, 10));
-        add(panelFormulario, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
-        add(panelBotones, BorderLayout.SOUTH);
     }
+
+    private void configurarEnterParaGuardarModificar() {
+        KeyAdapter enterAdapter = new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    if (txtId.getText().trim().isEmpty()) {
+                        guardarUsuario();
+                    } else {
+                        modificarUsuario();
+                    }
+                }
+            }
+        };
+        txtNombre.addKeyListener(enterAdapter);
+        txtApellido.addKeyListener(enterAdapter);
+        txtTelefono.addKeyListener(enterAdapter);
+    }
+
+    /* ---------- Carga de datos ---------- */
 
     private void cargarDatosTabla() {
         modeloTabla.setRowCount(0);
-        for (Usuario usuario : listaUsuarios) {
-            Object[] fila = { usuario.getIdUsuario(), usuario.getNombre(), usuario.getApellido(), usuario.getTelefono() };
+        for (Usuario u : listaUsuarios) {
+            Object[] fila = { u.getIdUsuario(), u.getNombre(), u.getApellido(), u.getTelefono() };
             modeloTabla.addRow(fila);
         }
     }
 
     private void cargarDatosTabla(String busqueda) {
         modeloTabla.setRowCount(0);
-        for (Usuario usuario : listaUsuarios) {
-            Object[] fila = { usuario.getIdUsuario(), usuario.getNombre(), usuario.getApellido(), usuario.getTelefono() };
-            for(Object elemento : fila){
-                if(elemento != null && elemento.toString().toLowerCase().contains(busqueda.toLowerCase())){
+        for (Usuario u : listaUsuarios) {
+            Object[] fila = { u.getIdUsuario(), u.getNombre(), u.getApellido(), u.getTelefono() };
+            for (Object elem : fila) {
+                if (elem != null && elem.toString().toLowerCase().contains(busqueda.toLowerCase())) {
                     modeloTabla.addRow(fila);
                     break;
                 }
@@ -121,7 +169,6 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
         }
     }
 
-    // --- Lógica de Negocio Adaptada a ID entero ---
     @Override
     public void buscar(String criterio) {
         limpiarCampos();
@@ -129,125 +176,99 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
     }
 
     public void actualizarDatos() {
-        this.listaUsuarios = this.usuarioDAO.obtenerTodos();
-        this.cargarDatosTabla();
+        listaUsuarios = usuarioDAO.obtenerTodos();
+        cargarDatosTabla();
     }
 
-    private void guardarUsuario() {
-    	
-    	if(!validarCampos()) {
-    		return;
-    	}
-    	
-        // Genera un nuevo ID automáticamente
-        int nuevoId = generarNuevoId();
+    /* ---------- Acciones ---------- */
 
-        Usuario nuevoUsuario = new Usuario(nuevoId, txtNombre.getText(), txtApellido.getText(), txtTelefono.getText());
-        listaUsuarios.add(nuevoUsuario);
+    private void guardarUsuario() {
+        if (!validarCampos()) return;
+
+        int nuevoId = generarNuevoId();
+        Usuario u = new Usuario(nuevoId, txtNombre.getText(), txtApellido.getText(), txtTelefono.getText());
+
+        listaUsuarios.add(u);
         usuarioDAO.guardarTodos(listaUsuarios);
-        cargarDatosTabla();
+        actualizarDatos();
         limpiarCampos();
-        JOptionPane.showMessageDialog(this, "Usuario guardado exitosamente con ID: " + nuevoId, "Éxito",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Usuario guardado con ID: " + nuevoId, "Éxito", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void modificarUsuario() {
-        int filaSeleccionada = tablaUsuarios.getSelectedRow();
-        if (filaSeleccionada < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un usuario de la tabla para modificar.", "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        int fila = tablaUsuarios.getSelectedRow();
+        if (fila < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un usuario.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Obtiene el ID directamente de la tabla
-        int idModificar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
-        Usuario usuarioExistente = buscarUsuarioPorId(idModificar);
+        int id = (int) modeloTabla.getValueAt(fila, 0);
+        Usuario u = buscarUsuarioPorId(id);
 
-        if (txtNombre.getText().isEmpty() || txtApellido.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El Nombre y Apellido son obligatorios.", "Error de Validación",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if (!validarCamposSinId()) return;
 
-        usuarioExistente.setNombre(txtNombre.getText());
-        usuarioExistente.setApellido(txtApellido.getText());
-        usuarioExistente.setTelefono(txtTelefono.getText());
+        u.setNombre(txtNombre.getText());
+        u.setApellido(txtApellido.getText());
+        u.setTelefono(txtTelefono.getText());
 
         usuarioDAO.guardarTodos(listaUsuarios);
-        cargarDatosTabla();
+        actualizarDatos();
         limpiarCampos();
-        JOptionPane.showMessageDialog(this, "Usuario modificado exitosamente.", "Éxito",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Usuario modificado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void eliminarUsuario() {
-        int filaSeleccionada = tablaUsuarios.getSelectedRow();
-        if (filaSeleccionada < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un usuario de la tabla para eliminar.", "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        int fila = tablaUsuarios.getSelectedRow();
+        if (fila < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un usuario.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        int opcion = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que deseas eliminar este usuario?",
-                "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
-
+        int opcion = JOptionPane.showConfirmDialog(this, "¿Eliminar este usuario?", "Confirmar", JOptionPane.YES_NO_OPTION);
         if (opcion == JOptionPane.YES_OPTION) {
-            int idAEliminar = (int) modeloTabla.getValueAt(filaSeleccionada, 0);
-            Usuario usuarioAEliminar = buscarUsuarioPorId(idAEliminar);
+            int id = (int) modeloTabla.getValueAt(fila, 0);
+            Usuario u = buscarUsuarioPorId(id);
 
-            listaUsuarios.remove(usuarioAEliminar);
+            listaUsuarios.remove(u);
             usuarioDAO.guardarTodos(listaUsuarios);
-            cargarDatosTabla();
+            actualizarDatos();
             limpiarCampos();
-            JOptionPane.showMessageDialog(this, "Usuario eliminado exitosamente.", "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Usuario eliminado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
+    /* ---------- Validaciones ---------- */
+
     private boolean validarCampos() {
-    	 if (!txtId.getText().isEmpty()) {
-             JOptionPane.showMessageDialog(this, "El registro ya existe", "Registro existente",
-                 JOptionPane.ERROR_MESSAGE);
-                 return false;
-         }
+        if (!txtId.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Este registro ya existe.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return validarCamposSinId();
+    }
 
-         if (txtNombre.getText().isEmpty() || txtApellido.getText().isEmpty() || txtTelefono.getText().isEmpty()) {
-             JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error de Validación",
-                     JOptionPane.ERROR_MESSAGE);
-             return false;
-         }
-         
-         if(txtNombre.getText().trim().length() < 2 || txtNombre.getText().trim().length() > 100) {
-        	 JOptionPane.showMessageDialog(this,
-     	            "El Nombre debe tener entre 2 y 100 caracteres.",
-     	            "Error de Validación",
-     	            JOptionPane.ERROR_MESSAGE);
-     	        return false;
-         }
-         
-         if(txtApellido.getText().trim().length() < 2 || txtApellido.getText().trim().length() > 100) {
-        	 JOptionPane.showMessageDialog(this,
-     	            "El Apellido debe tener entre 2 y 100 caracteres.",
-     	            "Error de Validación",
-     	            JOptionPane.ERROR_MESSAGE);
-     	        return false;
-         }
-         
-         String telefono = txtTelefono.getText().trim();
-
-	      // Validar que tenga exactamente 10 dígitos numéricos
-	      if (!telefono.matches("\\d{10}")) {
-	          JOptionPane.showMessageDialog(this, 
-	                  "El teléfono debe contener exactamente 10 dígitos numéricos", 
-	                  "Error de Validación", 
-	                  JOptionPane.ERROR_MESSAGE);
-	          return false;
-	      }
-
-         
+    private boolean validarCamposSinId() {
+        if (txtNombre.getText().trim().isEmpty() ||
+            txtApellido.getText().trim().isEmpty() ||
+            txtTelefono.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (txtNombre.getText().trim().length() < 2 || txtNombre.getText().trim().length() > 100) {
+            JOptionPane.showMessageDialog(this, "El Nombre debe tener entre 2 y 100 caracteres.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (txtApellido.getText().trim().length() < 2 || txtApellido.getText().trim().length() > 100) {
+            JOptionPane.showMessageDialog(this, "El Apellido debe tener entre 2 y 100 caracteres.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (!txtTelefono.getText().trim().matches("\\d{10}")) {
+            JOptionPane.showMessageDialog(this, "El teléfono debe contener exactamente 10 dígitos numéricos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
         return true;
     }
-    
+
     private void limpiarCampos() {
         txtId.setText("");
         txtNombre.setText("");
@@ -256,43 +277,20 @@ public class GestionUsuariosUI extends JPanel implements Buscable {
         btnGuardar.setVisible(true);
         tablaUsuarios.clearSelection();
     }
-    
 
-    private void configurarEnterParaGuardarModificar() {
-        KeyAdapter enterAdapter = new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    if (txtId.getText().trim().isEmpty()) {
-                        guardarUsuario();;
-                    } else {
-                        modificarUsuario();
-                    }
-                }
-            }
-        };
-
-        // Lo aplicamos a todos los campos
-        txtNombre.addKeyListener(enterAdapter);
-        txtApellido.addKeyListener(enterAdapter);
-        txtTelefono.addKeyListener(enterAdapter);
-    }
+    /* ---------- Utilitarios ---------- */
 
     private Usuario buscarUsuarioPorId(int id) {
-        for (Usuario usuario : listaUsuarios) {
-            if (usuario.getIdUsuario() == id) {
-                return usuario;
-            }
+        for (Usuario u : listaUsuarios) {
+            if (u.getIdUsuario() == id) return u;
         }
         return null;
     }
 
     private int generarNuevoId() {
         int maxId = 0;
-        for (Usuario usuario : listaUsuarios) {
-            if (usuario.getIdUsuario() > maxId) {
-                maxId = usuario.getIdUsuario();
-            }
+        for (Usuario u : listaUsuarios) {
+            if (u.getIdUsuario() > maxId) maxId = u.getIdUsuario();
         }
         return maxId + 1;
     }

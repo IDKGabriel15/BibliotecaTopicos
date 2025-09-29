@@ -11,7 +11,6 @@ public class PrestamoDAO {
     public void guardarTodos(List<Prestamo> prestamos) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(NOMBRE_ARCHIVO))) {
             oos.writeObject(prestamos);
-            System.out.println("Préstamos guardados en " + NOMBRE_ARCHIVO);
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Error al guardar los préstamos.");
