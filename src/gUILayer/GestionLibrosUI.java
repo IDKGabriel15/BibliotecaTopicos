@@ -13,15 +13,12 @@ import entidades.Libro;
 import entidades.Prestamo;
 import DAO.LibroDAO;
 import DAO.PrestamoDAO;
-import java.io.*;
-import javax.swing.filechooser.FileNameExtensionFilter; 
-
 
 public class GestionLibrosUI extends JPanel implements Buscable {
     private static final long serialVersionUID = 1L;
 
     private JTextField txtId, txtTitulo, txtAutor, txtAnio, txtExistencia;
-    private JButton btnGuardar, btnEliminar, btnModificar, btnLimpiar, btnImportar, btnExportar;
+    private JButton btnGuardar, btnEliminar, btnModificar, btnLimpiar;
     private JTable tablaLibros;
     private DefaultTableModel modeloTabla;
     private LibroDAO libroDAO;
@@ -30,6 +27,10 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     public GestionLibrosUI() {
         libroDAO = new LibroDAO();
         listaLibros = libroDAO.obtenerTodos();
+        //COLORES BOTONES
+        UIManager.put("Button.background", new Color(252, 197, 184));
+        UIManager.put("Button.foreground", Color.BLACK);
+        UIManager.put("Button.select", new Color(235, 170, 141));
 
         //INICIALIZAR CAMPOS Y TABLA
         initFormulario();
@@ -88,22 +89,16 @@ public class GestionLibrosUI extends JPanel implements Buscable {
         btnModificar = new JButton("Modificar");
         btnEliminar = new JButton("Eliminar");
         btnLimpiar = new JButton("Limpiar");
-        btnImportar = new JButton("Importar CSV"); // NUEVO
-        btnExportar = new JButton("Exportar CSV"); // NUEVO
 
-        btnGuardar.addActionListener(e -> guardarLibro());
-        btnModificar.addActionListener(e -> modificarLibro());
-        btnEliminar.addActionListener(e -> eliminarLibro());
-        btnLimpiar.addActionListener(e -> limpiarCampos());
-        btnImportar.addActionListener(e -> importarDesdeCSV());
-        btnExportar.addActionListener(e -> exportarACSV());
+        btnGuardar.addActionListener(_ -> guardarLibro());
+        btnModificar.addActionListener(_ -> modificarLibro());
+        btnEliminar.addActionListener(_ -> eliminarLibro());
+        btnLimpiar.addActionListener(_ -> limpiarCampos());
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnModificar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
-        panelBotones.add(btnImportar); 
-        panelBotones.add(btnExportar); 
 
         return panelBotones;
     }
@@ -255,112 +250,6 @@ public class GestionLibrosUI extends JPanel implements Buscable {
             actualizarDatos();
             limpiarCampos();
             JOptionPane.showMessageDialog(this, "Libro eliminado exitosamente.");
-        }
-    }
-    
-    private void exportarACSV() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Guardar como CSV");
-        // Filtro para mostrar solo archivos .csv
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos CSV", "csv"));
-        
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            File archivoParaGuardar = fileChooser.getSelectedFile();
-            // Asegurarse de que el archivo tenga la extensión .csv
-            if (!archivoParaGuardar.getPath().toLowerCase().endsWith(".csv")) {
-                archivoParaGuardar = new File(archivoParaGuardar.getPath() + ".csv");
-            }
-
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivoParaGuardar))) {
-                // Escribir la cabecera del CSV
-                writer.write("ID,Titulo,Autor,AnioPublicacion,Existencia\n");
-
-                // Escribir cada libro en una nueva línea
-                for (Libro libro : listaLibros) {
-                    // Para evitar problemas con comas en los títulos/autores, los encerramos en comillas
-                    String linea = String.format("%d,\"%s\",\"%s\",%d,%d\n",
-                        libro.getid(),
-                        libro.getTitulo(),
-                        libro.getAutor(),
-                        libro.getAnioPublicacion(),
-                        libro.getExistencia());
-                    writer.write(linea);
-                }
-                JOptionPane.showMessageDialog(this, "Datos exportados exitosamente a " + archivoParaGuardar.getName(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error al exportar los datos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    private void importarDesdeCSV() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Seleccionar archivo CSV para importar");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos CSV", "csv"));
-
-        int userSelection = fileChooser.showOpenDialog(this);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            File archivoAImportar = fileChooser.getSelectedFile();
-            int librosNuevos = 0;
-            int librosActualizados = 0;
-
-            try (BufferedReader reader = new BufferedReader(new FileReader(archivoAImportar))) {
-                String linea;
-                reader.readLine(); // Omitir la línea de cabecera
-
-                while ((linea = reader.readLine()) != null) {
-                    // Usamos una expresión regular para manejar correctamente los campos entre comillas
-                    String[] datos = linea.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-                    if (datos.length != 5) {
-                        System.err.println("Línea mal formada, se omite: " + linea);
-                        continue; // Saltar a la siguiente línea
-                    }
-
-                    try {
-                        int id = Integer.parseInt(datos[0].trim());
-                        // Quitar las comillas de los campos de texto
-                        String titulo = datos[1].trim().replaceAll("^\"|\"$", "");
-                        String autor = datos[2].trim().replaceAll("^\"|\"$", "");
-                        int anio = Integer.parseInt(datos[3].trim());
-                        int existencia = Integer.parseInt(datos[4].trim());
-
-                        Libro libroExistente = buscarLibroPorId(id);
-                        if (libroExistente != null) {
-                            // El libro ya existe, actualizamos sus datos
-                            libroExistente.setTitulo(titulo);
-                            libroExistente.setAutor(autor);
-                            libroExistente.setAnioPublicacion(anio);
-                            libroExistente.setExistencia(existencia);
-                            librosActualizados++;
-                        } else {
-                            // Es un libro nuevo, lo añadimos
-                            Libro nuevoLibro = new Libro(id, titulo, autor, anio, existencia);
-                            listaLibros.add(nuevoLibro);
-                            librosNuevos++;
-                        }
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error de formato numérico en línea, se omite: " + linea);
-                    }
-                }
-
-                if (librosNuevos > 0 || librosActualizados > 0) {
-                    libroDAO.guardarTodos(listaLibros);
-                    actualizarDatos(); // Refrescar la tabla
-                    JOptionPane.showMessageDialog(this, 
-                        "Importación completada.\n" + 
-                        "Libros nuevos agregados: " + librosNuevos + "\n" +
-                        "Libros existentes actualizados: " + librosActualizados, 
-                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(this, "No se encontraron nuevos libros para importar o el archivo estaba vacío.", "Información", JOptionPane.INFORMATION_MESSAGE);
-                }
-
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error al importar los datos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
-            }
         }
     }
 

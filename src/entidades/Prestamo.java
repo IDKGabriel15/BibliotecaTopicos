@@ -8,13 +8,15 @@ import java.util.Date;
 public class Prestamo implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
+	// ATRIBUTOS DEL PRÉSTAMO
 	private int idPrestamo;
 	private int idLibro;
 	private int idUsuario;
-	private String fechaPrestamo;
-	private Date fechaEntrega;
-	private String fechaDevolucion;
+	private String fechaPrestamo; // FECHA EN QUE SE HIZO EL PRÉSTAMO
+	private Date fechaEntrega; // FECHA COMPROMISO DE ENTREGAR EL LIBRO
+	private String fechaDevolucion;// FECHA REAL DE DEVOLUCIÓN
 
+	// CONSTRUCTOR DONDE SE INICIALIZAN TODOS LOS CAMPOS
 	public Prestamo(int idPrestamo, int idLibro, int idUsuario, String fechaPrestamo, Date fechaEntrega, String fechaDevolucion) {
 	    this.idPrestamo = idPrestamo;
 	    this.idLibro = idLibro;
@@ -24,7 +26,7 @@ public class Prestamo implements Serializable {
 	    this.fechaDevolucion = fechaDevolucion;
 	}
 	
-	// Getters
+	 // GETTERS
 	public int getIdPrestamo() {
 	    return idPrestamo;
 	}
@@ -41,6 +43,7 @@ public class Prestamo implements Serializable {
 	    return fechaPrestamo;
 	}
 	
+	// FORMATEA LA FECHA DE ENTREGA EN TEXTO 
 	public String getFechaEntregaFormateada() {
 	    SimpleDateFormat formato = new SimpleDateFormat("dd/MM/yyyy");
 	    return formato.format(fechaEntrega);
@@ -50,11 +53,12 @@ public class Prestamo implements Serializable {
 	    return fechaDevolucion;
 	}
 	
-	// Setters (solo para devolver libro)
+	// SETTERS (SOLO PARA DEVOLVER LIBRO)
 	public void setFechaDevolucion(String fechaDevolucion) {
 	    this.fechaDevolucion = fechaDevolucion;
 	}
 	
+	// GENERA UNA CADENA CON LOS ATRIBUTOS DEL PRÉSTAMO
 	@Override
 	public String toString() {
 	    return "Préstamo{" +
