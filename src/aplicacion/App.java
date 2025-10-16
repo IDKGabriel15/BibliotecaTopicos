@@ -5,6 +5,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
 import gUILayer.*;
+import java.awt.Color;
 
 public class App extends JFrame {
 
@@ -31,6 +32,7 @@ public class App extends JFrame {
         inicializarComponentes();
         setIconImage(new ImageIcon("assets/book.png").getImage());
         cardLayout.show(panelPrincipal, LIBROS);
+        UIManager.put("cardLayout.background", new Color(217, 175, 156));
     }
 
     private void configurarVentana() {
@@ -38,6 +40,7 @@ public class App extends JFrame {
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        UIManager.put("ToolBar.background", new Color(217, 175, 156));
     }
 
     private void inicializarComponentes() {
@@ -47,23 +50,29 @@ public class App extends JFrame {
     }
 
     private void crearMenu() {
+    	UIManager.put("MenuBar.background", new Color(217, 175, 156)); 
+        UIManager.put("Menu.background", new Color(217, 175, 156));
+        UIManager.put("MenuItem.background", new Color(224, 203, 184));
+        UIManager.put("Menu.selectionBackground", new Color(214, 198, 184));
+        UIManager.put("MenuItem.selectionBackground", new Color(217, 175, 156));
+        
         menuBar = new JMenuBar();
 
         JMenu menuArchivo = new JMenu("Perfil");
-        JMenuItem itemSalir = new JMenuItem("Cerrar sesión");
+        JMenuItem itemSalir = new JMenuItem("Cerrar sesión", new ImageIcon("assets/cerrar.png"));
         itemSalir.addActionListener(e -> System.exit(0));
         menuArchivo.add(itemSalir);
 
         JMenu menuGestion = new JMenu("Gestión");
-        JMenuItem itemLibros = new JMenuItem("Gestión de Libros");
-        JMenuItem itemUsuarios = new JMenuItem("Gestión de Usuarios");
-        JMenuItem itemPrestamos = new JMenuItem("Gestión de Préstamos");
+        JMenuItem itemLibros = new JMenuItem("Gestión de Libros", new ImageIcon("assets/libros.png"));
+        JMenuItem itemUsuarios = new JMenuItem("Gestión de Usuarios,", new ImageIcon("assets/usuarios.png"));
+        JMenuItem itemPrestamos = new JMenuItem("Gestión de Préstamos", new ImageIcon("assets/prestamos.png"));
         menuGestion.add(itemLibros);
         menuGestion.add(itemUsuarios);
         menuGestion.add(itemPrestamos);
 
         JMenu menuAyuda = new JMenu("Ayuda");
-        JMenuItem itemAcercaDe = new JMenuItem("Acerca de...");
+        JMenuItem itemAcercaDe = new JMenuItem("Acerca de...", new ImageIcon("assets/ayuda.png"));
         itemAcercaDe.addActionListener(e -> JOptionPane.showMessageDialog(this,
                 "Sistema de Control Bibliotecario v1.0\nDesarrollado por PROYECTO TOPICOS",
                 "Acerca de",
@@ -83,6 +92,9 @@ public class App extends JFrame {
     }
 
     private void crearToolBar() {
+    	UIManager.put("Button.background", new Color(217, 175, 156));
+        UIManager.put("Button.foreground", Color.BLACK);
+        
         toolBar = new JToolBar("Navegación");
         toolBar.setFloatable(false);
 
@@ -173,6 +185,10 @@ public class App extends JFrame {
         SwingUtilities.invokeLater(() -> {
             App app = new App();
             app.setVisible(true);
+            
+            
         });
+        
+        
     }
 }
