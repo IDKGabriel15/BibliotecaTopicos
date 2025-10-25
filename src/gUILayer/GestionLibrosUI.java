@@ -1,3 +1,4 @@
+// Reemplaza el contenido de gUILayer.GestionLibrosUI.java
 package gUILayer;
 
 import java.awt.*;
@@ -5,94 +6,134 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.Year;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import entidades.Libro;
-import entidades.Prestamo;
+import entidades.LibroVista;
 import DAO.LibroDAO;
-import DAO.PrestamoDAO;
 
 public class GestionLibrosUI extends JPanel implements Buscable {
     private static final long serialVersionUID = 1L;
 
-    private JTextField txtId, txtTitulo, txtAutor, txtAnio, txtExistencia;
+    // --- Campos de Formulario ---
+    private JTextField txtISBN, txtTitulo, txtAutor, txtAnioRegistro, txtExistencia, txtDisponibles;
+    private JTextField txtIdioma;
+    private JComboBox<String> cmbPasta;
+    private JCheckBox chkPrestable;
+    private JPanel panelDatosNuevos;
+    
+    // <<< NUEVO >>> Checkbox para filtrar
+    private JCheckBox chkMostrarInactivos;
+
     private JButton btnGuardar, btnEliminar, btnModificar, btnLimpiar;
     private JTable tablaLibros;
     private DefaultTableModel modeloTabla;
+    
     private LibroDAO libroDAO;
-    private List<Libro> listaLibros;
+    private List<LibroVista> listaLibrosCompleta; // Lista con TODOS (activos e inactivos)
+    
+    private LibroVista libroSeleccionado = null;
 
     public GestionLibrosUI() {
         libroDAO = new LibroDAO();
-        listaLibros = libroDAO.obtenerTodos();
-        //COLORES BOTONES
-        UIManager.put("Button.background", new Color(252, 197, 184));
-        UIManager.put("Button.foreground", Color.BLACK);
-        UIManager.put("Button.select", new Color(235, 170, 141));
-
-        //INICIALIZAR CAMPOS Y TABLA
+        
         initFormulario();
         initTabla();
         
-        // PANELES
         JPanel panelFormulario = initPanelFormulario();
         JPanel panelBotones = initPanelBotones();
-
         
         configurarEnterParaGuardarModificar();
-        actualizarDatos();
-
-        // CONTENEDOR PRINCIPAL
+        
         setLayout(new BorderLayout(10, 10));
         add(panelFormulario, BorderLayout.NORTH);
         add(new JScrollPane(tablaLibros), BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
-    }
 
-    private JPanel initPanelFormulario() {
-        JPanel panelFormulario = new JPanel(new GridLayout(5, 2, 10, 10));
-        panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del Libro"));
-
-        panelFormulario.add(new JLabel("ID (Generado):"));
-        panelFormulario.add(txtId);
-
-        panelFormulario.add(new JLabel("Título:"));
-        panelFormulario.add(txtTitulo);
-
-        panelFormulario.add(new JLabel("Autor:"));
-        panelFormulario.add(txtAutor);
-
-        panelFormulario.add(new JLabel("Año de Publicación:"));
-        panelFormulario.add(txtAnio);
-
-        panelFormulario.add(new JLabel("Existencia:"));
-        panelFormulario.add(txtExistencia);
-
-        return panelFormulario;
+        actualizarDatos();
     }
 
     private void initFormulario() {
-        txtId = new JTextField(4);
-        txtId.setEditable(false);
+        // ... (Campos principales - sin cambios)
+        txtISBN = new JTextField(13);
         txtTitulo = new JTextField(20);
         txtAutor = new JTextField(20);
-        txtAnio = new JTextField(5);
+        txtAnioRegistro = new JTextField(5);
+        txtAnioRegistro.setEditable(false);
         txtExistencia = new JTextField(5);
+        txtDisponibles = new JTextField(5);
+        txtDisponibles.setEditable(false);
+
+        // ... (Campos para libros nuevos - sin cambios)
+        txtIdioma = new JTextField(3);
+        cmbPasta = new JComboBox<>(new String[]{"Blanda", "Dura"});
+        chkPrestable = new JCheckBox("Prestable", true);
+        
+        // <<< NUEVO >>> Checkbox de filtro
+        chkMostrarInactivos = new JCheckBox("Mostrar Inactivos");
+        chkMostrarInactivos.addActionListener(e -> cargarDatosTabla()); // Recarga la tabla al hacer clic
     }
 
-    
+    private JPanel initPanelFormulario() {
+        JPanel panelContenedor = new JPanel(new GridLayout(1, 2, 15, 0));
+        panelContenedor.setBorder(BorderFactory.createTitledBorder("Datos del Libro (Usando SQL Server)"));
+
+        JPanel panelFormulario = new JPanel(new GridLayout(6, 2, 10, 10));
+        
+        panelFormulario.add(new JLabel("ISBN (ID):"));
+        panelFormulario.add(txtISBN);
+        panelFormulario.add(new JLabel("Título:"));
+        panelFormulario.add(txtTitulo);
+        panelFormulario.add(new JLabel("Autor:"));
+        panelFormulario.add(txtAutor);
+        panelFormulario.add(new JLabel("Año Registro (DB):"));
+        panelFormulario.add(txtAnioRegistro);
+        panelFormulario.add(new JLabel("Existencia Total:"));
+        panelFormulario.add(txtExistencia);
+        panelFormulario.add(new JLabel("Disponibles (DB):"));
+        panelFormulario.add(txtDisponibles);
+        
+        panelContenedor.add(panelFormulario);
+
+        panelDatosNuevos = new JPanel(new GridLayout(6, 2, 10, 10));
+        panelDatosNuevos.setBorder(BorderFactory.createTitledBorder("Detalles (Solo Nuevo Ingreso)"));
+        
+        panelDatosNuevos.add(new JLabel("Idioma (e.g. 'ESP'):"));
+        panelDatosNuevos.add(txtIdioma);
+        panelDatosNuevos.add(new JLabel("Pasta:"));
+        panelDatosNuevos.add(cmbPasta);
+        panelDatosNuevos.add(new JLabel("Préstamo:"));
+        panelDatosNuevos.add(chkPrestable);
+        panelDatosNuevos.add(new JLabel("")); // Relleno
+        
+        // <<< NUEVO >>> Añadimos el checkbox al panel derecho
+        panelDatosNuevos.add(chkMostrarInactivos);
+        
+        // Rellenos
+        panelDatosNuevos.add(new JLabel(""));
+        panelDatosNuevos.add(new JLabel(""));
+        panelDatosNuevos.add(new JLabel(""));
+        panelDatosNuevos.add(new JLabel(""));
+
+        panelContenedor.add(panelDatosNuevos);
+
+        return panelContenedor;
+    }
+
     private JPanel initPanelBotones() {
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        btnGuardar = new JButton("Guardar");
-        btnModificar = new JButton("Modificar");
-        btnEliminar = new JButton("Eliminar");
+        btnGuardar = new JButton("Guardar Nuevo");
+        btnModificar = new JButton("Modificar Existente");
+        // <<< CAMBIO >>> Texto del botón
+        btnEliminar = new JButton("Desactivar/Reactivar");
         btnLimpiar = new JButton("Limpiar");
 
         btnGuardar.addActionListener(_ -> guardarLibro());
         btnModificar.addActionListener(_ -> modificarLibro());
-        btnEliminar.addActionListener(_ -> eliminarLibro());
+        // <<< CAMBIO >>> Nombre del método
+        btnEliminar.addActionListener(_ -> toggleActivoLibro());
         btnLimpiar.addActionListener(_ -> limpiarCampos());
 
         panelBotones.add(btnGuardar);
@@ -104,7 +145,8 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     }
 
     private void initTabla() {
-        String[] columnas = { "ID", "Título", "Autor", "Año","Existencia", "Disponibles"};
+        // <<< CAMBIO >>> Añadida columna Estatus
+        String[] columnas = { "ISBN", "Título", "Autor", "Año Reg.", "Existencia", "Disponibles", "Estatus" };
         modeloTabla = new DefaultTableModel(columnas, 0) {
             private static final long serialVersionUID = 1L;
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -120,35 +162,84 @@ public class GestionLibrosUI extends JPanel implements Buscable {
     }
 
     private void cargarFormularioDesdeTabla(int fila) {
-        int id = (int) modeloTabla.getValueAt(fila, 0);
-        Libro libro = buscarLibroPorId(id);
-        if (libro == null) return;
+        String isbn = (String) modeloTabla.getValueAt(fila, 0);
+        libroSeleccionado = buscarLibroPorISBN(isbn); // Busca en la lista completa
+        if (libroSeleccionado == null) return;
 
-        txtId.setText(String.valueOf(libro.getid()));
-        txtTitulo.setText(libro.getTitulo());
-        txtAutor.setText(libro.getAutor());
-        txtAnio.setText(String.valueOf(libro.getAnioPublicacion()));
-        txtExistencia.setText(String.valueOf(libro.getExistencia()));
+        txtISBN.setText(libroSeleccionado.getIsbn());
+        txtTitulo.setText(libroSeleccionado.getTitulo());
+        txtAutor.setText(libroSeleccionado.getAutor());
+        txtAnioRegistro.setText(String.valueOf(libroSeleccionado.getAnioRegistro()));
+        txtExistencia.setText(String.valueOf(libroSeleccionado.getTotalExistencia()));
+        txtDisponibles.setText(String.valueOf(libroSeleccionado.getDisponibles()));
+
+        // --- <<< NUEVA LÓGICA DE BOTONES >>> ---
+        txtISBN.setEditable(false);
         btnGuardar.setVisible(false);
+        panelDatosNuevos.setVisible(false);
+        btnModificar.setVisible(true);
+        btnEliminar.setVisible(true);
+
+        // Si está Activo ('S'), el botón dice "Desactivar"
+        if ("S".equals(libroSeleccionado.getEstatus())) {
+            btnEliminar.setText("Desactivar");
+            btnEliminar.setToolTipText("Marcar este ISBN como Inactivo");
+            // Se puede modificar un libro activo
+            btnModificar.setEnabled(true);
+            txtTitulo.setEditable(true);
+            txtAutor.setEditable(true);
+            txtExistencia.setEditable(true);
+        } else {
+        // Si está Inactivo ('N'), el botón dice "Reactivar"
+            btnEliminar.setText("Reactivar");
+            btnEliminar.setToolTipText("Volver a activar este ISBN");
+            // No dejamos modificar un libro inactivo (excepto reactivarlo)
+            btnModificar.setEnabled(false);
+            txtTitulo.setEditable(false);
+            txtAutor.setEditable(false);
+            txtExistencia.setEditable(false);
+        }
     }
 
     private void cargarDatosTabla() { cargarDatosTabla(""); }
 
     private void cargarDatosTabla(String busqueda) {
         modeloTabla.setRowCount(0);
-        listaLibros.stream()
-            .filter(libro -> busqueda.isEmpty() || libroCoincide(libro, busqueda))
-            .forEach(libro -> modeloTabla.addRow(new Object[] {
-                libro.getid(), libro.getTitulo(), libro.getAutor(),
-                libro.getAnioPublicacion(), libro.getExistencia(),
-                calcularDisponibles(libro.getid())
-            }));
+        // Si la lista está vacía, la carga de la BD
+        if (listaLibrosCompleta == null) {
+            listaLibrosCompleta = libroDAO.obtenerLibrosVista();
+        }
+
+        // --- <<< NUEVA LÓGICA DE FILTRADO >>> ---
+        boolean mostrarInactivos = chkMostrarInactivos.isSelected();
+        
+        List<LibroVista> librosFiltrados = listaLibrosCompleta.stream()
+            .filter(libro -> {
+                // 1. Filtro por Estatus
+                boolean estatusCoincide = mostrarInactivos || "S".equals(libro.getEstatus());
+                if (!estatusCoincide) return false;
+                
+                // 2. Filtro por Búsqueda
+                return busqueda.isEmpty() || libroCoincide(libro, busqueda);
+            })
+            .collect(Collectors.toList());
+        
+        // --- Carga en la tabla ---
+        librosFiltrados.forEach(libro -> modeloTabla.addRow(new Object[] {
+            libro.getIsbn(),
+            libro.getTitulo(),
+            libro.getAutor(),
+            libro.getAnioRegistro(),
+            libro.getTotalExistencia(),
+            libro.getDisponibles(),
+            libro.getEstatusDescripcion() // <<< Muestra "Activo" o "Inactivo"
+        }));
     }
 
-    private boolean libroCoincide(Libro libro, String busqueda) {
-        String datos = (libro.getid() + libro.getTitulo() + libro.getAutor() +
-                        libro.getAnioPublicacion() + libro.getExistencia()).toLowerCase();
-        return datos.contains(busqueda.toLowerCase());
+    private boolean libroCoincide(LibroVista libro, String busqueda) {
+        String b = busqueda.toLowerCase();
+        String datos = (libro.getIsbn() + libro.getTitulo() + libro.getAutor()).toLowerCase();
+        return datos.contains(b);
     }
 
     //-- INTERFAZ BUSCABLE--
@@ -160,120 +251,145 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 
     @Override
     public void actualizarDatos() {
-        listaLibros = libroDAO.obtenerTodos();
+        // Forzamos la recarga desde la BD
+        listaLibrosCompleta = libroDAO.obtenerLibrosVista();
         cargarDatosTabla();
     }
     //----------------------
 
     private void guardarLibro() {
-        if (!validarCampos()) return;
+        if (!validarCamposGuardar()) return;
+        
+        try {
+            // ... (Lógica de guardar no cambia)
+            String isbn = txtISBN.getText().trim();
+            String titulo = txtTitulo.getText().trim();
+            String autor = txtAutor.getText().trim();
+            int numCopias = Integer.parseInt(txtExistencia.getText().trim());
+            String idioma = txtIdioma.getText().trim().toUpperCase();
+            String pasta = (cmbPasta.getSelectedIndex() == 0) ? "B" : "D";
+            char prestable = chkPrestable.isSelected() ? 'S' : 'N';
 
-        for (Libro libro : listaLibros) {
-            if (libro.getTitulo().equalsIgnoreCase(txtTitulo.getText().trim()) &&
-                libro.getAutor().equalsIgnoreCase(txtAutor.getText().trim())) {
+            String mensaje = libroDAO.registrarNuevoLibro(isbn, titulo, autor, idioma, pasta, prestable, numCopias);
+            
+            JOptionPane.showMessageDialog(this, mensaje, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            actualizarDatos();
+            limpiarCampos();
 
-                libro.setExistencia(libro.getExistencia() + 1);
-                libroDAO.guardarTodos(listaLibros);
-                actualizarDatos();
-                limpiarCampos();
-                JOptionPane.showMessageDialog(this, "Se ha agregado otro ejemplar de este título.");
-                return;
-            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "La existencia debe ser un número válido.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al guardar en BD:\n" + e.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
         }
-
-        if (!txtId.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El registro ya existe. Limpia los campos para agregar un nuevo libro.", "Registro existente", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        int nuevoId = generarNuevoId();
-        Libro nuevoLibro = new Libro(
-    		nuevoId, txtTitulo.getText(), txtAutor.getText(),
-    		Integer.parseInt(txtAnio.getText().trim()),
-            Integer.parseInt(txtExistencia.getText().trim())
-        );
-		listaLibros.add(nuevoLibro);
-        libroDAO.guardarTodos(listaLibros);
-        actualizarDatos();
-        limpiarCampos();
-        JOptionPane.showMessageDialog(this, "Libro guardado exitosamente con ID: " + nuevoId);
     }
 
     private void modificarLibro() {
-        int fila = tablaLibros.getSelectedRow();
-        if (fila < 0) { JOptionPane.showMessageDialog(this, "Selecciona un libro de la tabla para modificar."); return; }
-
-        int id = (int) modeloTabla.getValueAt(fila, 0);
-        Libro libro = buscarLibroPorId(id);
-        if (libro == null) { JOptionPane.showMessageDialog(this, "No se encontró el libro seleccionado."); return; }
-        if (!validarCampos()) return;
-
-        int anio = Integer.parseInt(txtAnio.getText().trim());
-        int existencia = Integer.parseInt(txtExistencia.getText().trim());
-
-        List<Prestamo> prestamos = new PrestamoDAO().obtenerTodos();
-        long prestados = prestamos.stream()
-            .filter(p -> p.getIdLibro() == id && "Pendiente".equals(p.getFechaDevolucion()))
-            .count();
-        if (existencia < prestados) {
-            JOptionPane.showMessageDialog(this, "La existencia debe ser mayor o igual a los prestados actuales (" + prestados + ").");
+        if (libroSeleccionado == null) {
+            JOptionPane.showMessageDialog(this, "Debe seleccionar un libro de la tabla para modificar.");
             return;
         }
-
-        libro.setTitulo(txtTitulo.getText());
-        libro.setAutor(txtAutor.getText());
-        libro.setAnioPublicacion(anio);
-        libro.setExistencia(existencia);
-
-        libroDAO.guardarTodos(listaLibros);
-        actualizarDatos();
-        limpiarCampos();
-        JOptionPane.showMessageDialog(this, "Libro modificado exitosamente.");
-    }
-
-    private void eliminarLibro() {
-        int fila = tablaLibros.getSelectedRow();
-        if (fila < 0) { JOptionPane.showMessageDialog(this, "Selecciona un libro de la tabla para eliminar."); return; }
-
-        int id = (int) modeloTabla.getValueAt(fila, 0);
-        Libro libro = buscarLibroPorId(id);
-        if (libro == null) return;
-
-        if (calcularDisponibles(id) < libro.getExistencia()) {
-            JOptionPane.showMessageDialog(this, "No es posible eliminar el libro porque no está disponible.");
+        if (!"S".equals(libroSeleccionado.getEstatus())) {
+            JOptionPane.showMessageDialog(this, "No se puede modificar un libro Inactivo.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        if (JOptionPane.showConfirmDialog(this, "¿Estás seguro de que deseas eliminar este libro?") == JOptionPane.YES_OPTION) {
-            listaLibros.remove(libro);
-            libroDAO.guardarTodos(listaLibros);
-            actualizarDatos();
-            limpiarCampos();
-            JOptionPane.showMessageDialog(this, "Libro eliminado exitosamente.");
-        }
-    }
-
-    private boolean validarCampos() {
-        if (txtTitulo.getText().trim().isEmpty() || txtAutor.getText().trim().isEmpty() || txtAnio.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos los campos (excepto ID) son obligatorios."); return false;
-        }
-        if (txtTitulo.getText().trim().length() < 2 || txtTitulo.getText().trim().length() > 100) {
-            JOptionPane.showMessageDialog(this, "El título debe tener entre 2 y 100 caracteres."); return false;
-        }
-        if (txtAutor.getText().trim().length() < 2 || txtAutor.getText().trim().length() > 100) {
-            JOptionPane.showMessageDialog(this, "El autor debe tener entre 2 y 100 caracteres."); return false;
-        }
-        if (!txtAutor.getText().trim().matches("[a-zA-ZáéíóúÁÉÍÓÚñÑ .,'-]+")) {
-            JOptionPane.showMessageDialog(this, "El nombre del autor contiene caracteres inválidos."); return false;
-        }
+        if (!validarCamposModificar()) return;
 
         try {
-            int anio = Integer.parseInt(txtAnio.getText().trim());
-            if (anio < 0 || anio > Year.now().getValue()) {
-                JOptionPane.showMessageDialog(this, "Año de publicación inválido."); return false;
-            }
-        } catch (NumberFormatException e) { JOptionPane.showMessageDialog(this, "Año de publicación debe ser un número."); return false; }
+            String isbn = libroSeleccionado.getIsbn();
+            String nuevoTitulo = txtTitulo.getText().trim();
+            String nuevoAutor = txtAutor.getText().trim();
+            int nuevaExistencia = Integer.parseInt(txtExistencia.getText().trim());
 
+            boolean algoCambio = false;
+            
+            // 1. Modificar Título/Autor (si cambiaron)
+            if (!nuevoTitulo.equals(libroSeleccionado.getTitulo()) || !nuevoAutor.equals(libroSeleccionado.getAutor())) {
+                libroDAO.modificarTitulo(isbn, nuevoTitulo, nuevoAutor);
+                algoCambio = true;
+            }
+            
+            // 2. Ajustar Existencia (si cambió)
+            if (nuevaExistencia != libroSeleccionado.getTotalExistencia()) {
+                String msgExistencia = libroDAO.ajustarExistencia(isbn, nuevaExistencia);
+                JOptionPane.showMessageDialog(this, msgExistencia, "Ajuste de Existencia", JOptionPane.INFORMATION_MESSAGE);
+                algoCambio = true;
+            }
+
+            if (!algoCambio) {
+                 JOptionPane.showMessageDialog(this, "No se detectaron cambios.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                 return;
+            }
+
+            JOptionPane.showMessageDialog(this, "Libro (ISBN: " + isbn + ") modificado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            actualizarDatos();
+            limpiarCampos();
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "La existencia debe ser un número válido.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al modificar en BD:\n" + e.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // <<< MÉTODO REFACTORIZADO >>>
+    // Este método reemplaza a 'eliminarLibro()'
+    private void toggleActivoLibro() {
+        if (libroSeleccionado == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un libro de la tabla.");
+            return;
+        }
+
+        String isbn = libroSeleccionado.getIsbn();
+        String mensajeAccion;
+        String sqlAccion;
+
+        try {
+            // Decide si Desactivar o Reactivar
+            if ("S".equals(libroSeleccionado.getEstatus())) {
+                // --- Lógica para DESACTIVAR ---
+                mensajeAccion = "¿Desactivar este libro (ISBN: " + isbn + ")?\n" +
+                                "No podrá ser prestado, pero su historial se conservará.";
+                if (JOptionPane.showConfirmDialog(this, mensajeAccion, "Confirmar Desactivación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+                    
+                    String mensajeExito = libroDAO.desactivarLibroPorISBN(isbn);
+                    JOptionPane.showMessageDialog(this, mensajeExito, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else {
+                // --- Lógica para REACTIVAR ---
+                mensajeAccion = "¿Reactivar este libro (ISBN: " + isbn + ")?";
+                if (JOptionPane.showConfirmDialog(this, mensajeAccion, "Confirmar Reactivación", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                    
+                    String mensajeExito = libroDAO.reactivarLibroPorISBN(isbn);
+                    JOptionPane.showMessageDialog(this, mensajeExito, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+            
+            // Recargamos todo
+            actualizarDatos();
+            limpiarCampos();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al actualizar estatus en BD:\n" + e.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ... (validarCamposGuardar y validarCamposModificar no cambian) ...
+    private boolean validarCamposGuardar() {
+        if (txtISBN.getText().trim().isEmpty() || 
+            txtTitulo.getText().trim().isEmpty() || 
+            txtAutor.getText().trim().isEmpty() || 
+            txtExistencia.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Los campos ISBN, Título, Autor y Existencia son obligatorios.");
+            return false;
+        }
+        if (!txtISBN.getText().trim().matches("\\d{13}")) {
+            JOptionPane.showMessageDialog(this, "El ISBN debe contener exactamente 13 dígitos numéricos.");
+            return false;
+        }
+        if (txtIdioma.getText().trim().length() > 3) {
+            JOptionPane.showMessageDialog(this, "El Idioma debe tener máximo 3 caracteres (ej. 'ESP').");
+            return false;
+        }
         try {
             int existencia = Integer.parseInt(txtExistencia.getText().trim());
             if (existencia <= 0) { JOptionPane.showMessageDialog(this, "La existencia debe ser mayor a 0."); return false; }
@@ -281,41 +397,69 @@ public class GestionLibrosUI extends JPanel implements Buscable {
 
         return true;
     }
+    
+    private boolean validarCamposModificar() {
+        if (txtTitulo.getText().trim().isEmpty() || 
+            txtAutor.getText().trim().isEmpty() || 
+            txtExistencia.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Los campos Título, Autor y Existencia no pueden estar vacíos.");
+            return false;
+        }
+        try {
+            int existencia = Integer.parseInt(txtExistencia.getText().trim());
+            if (existencia < 0) { JOptionPane.showMessageDialog(this, "La existencia no puede ser negativa."); return false; }
+        } catch (NumberFormatException e) { JOptionPane.showMessageDialog(this, "Existencia debe ser un número."); return false; }
+        
+        return true;
+    }
 
+    // ... (configurarEnterParaGuardarModificar no cambia) ...
     private void configurarEnterParaGuardarModificar() {
         KeyAdapter enterAdapter = new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    if (txtId.getText().trim().isEmpty()) guardarLibro();
+                    if (btnGuardar.isVisible()) guardarLibro();
                     else modificarLibro();
                 }
             }
         };
+        txtISBN.addKeyListener(enterAdapter);
         txtTitulo.addKeyListener(enterAdapter);
         txtAutor.addKeyListener(enterAdapter);
-        txtAnio.addKeyListener(enterAdapter);
         txtExistencia.addKeyListener(enterAdapter);
+        txtIdioma.addKeyListener(enterAdapter);
     }
-
+    
     private void limpiarCampos() {
-        txtId.setText(""); txtTitulo.setText(""); txtAutor.setText(""); txtAnio.setText(""); txtExistencia.setText("");
+        txtISBN.setText("");
+        txtTitulo.setText("");
+        txtAutor.setText("");
+        txtAnioRegistro.setText("");
+        txtExistencia.setText("");
+        txtDisponibles.setText("");
+        txtIdioma.setText("");
+        cmbPasta.setSelectedIndex(0);
+        chkPrestable.setSelected(true);
+        
+        // Estado inicial
+        txtISBN.setEditable(true);
+        txtTitulo.setEditable(true);
+        txtAutor.setEditable(true);
+        txtExistencia.setEditable(true);
         btnGuardar.setVisible(true);
+        panelDatosNuevos.setVisible(true);
+        btnModificar.setVisible(true);
+        btnModificar.setEnabled(true);
+        btnEliminar.setVisible(true);
+        btnEliminar.setText("Desactivar/Reactivar");
+        
         tablaLibros.clearSelection();
+        libroSeleccionado = null;
     }
 
-    private int generarNuevoId() { return listaLibros.isEmpty() ? 1 : listaLibros.get(listaLibros.size()-1).getid() + 1; }
-
-    private int calcularDisponibles(int idLibro) {
-        List<Prestamo> prestamos = new PrestamoDAO().obtenerTodos();
-        long prestados = prestamos.stream()
-            .filter(p -> p.getIdLibro() == idLibro && "Pendiente".equals(p.getFechaDevolucion()))
-            .count();
-        Libro libro = buscarLibroPorId(idLibro);
-        return libro == null ? 0 : Math.max(libro.getExistencia() - (int) prestados, 0);
-    }
-
-    private Libro buscarLibroPorId(int id) {
-        return listaLibros.stream().filter(l -> l.getid() == id).findFirst().orElse(null);
+    private LibroVista buscarLibroPorISBN(String isbn) {
+        if (listaLibrosCompleta == null) return null;
+        return listaLibrosCompleta.stream().filter(l -> l.getIsbn().equals(isbn)).findFirst().orElse(null);
     }
 }

@@ -11,18 +11,21 @@ public class App extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    // CONSTANTES PARA EL CARDLAYOUT
     private static final String LIBROS = "LIBROS";
-    private static final String USUARIOS = "USUARIOS";
+    private static final String ADULTOS = "ADULTOS";
+    private static final String JOVENES = "JOVENES";
     private static final String PRESTAMOS = "PRESTAMOS";
 
     private JPanel panelPrincipal;
     private CardLayout cardLayout;
     private JToolBar toolBar;
     private JMenuBar menuBar;
+    
     private GestionLibrosUI panelLibros;
-    private GestionUsuariosUI panelUsuarios;
+    private GestionAdultosUI panelAdultos; 
+    private GestionJovenesUI panelJovenes; 
     private GestionPrestamosUI panelPrestamos;
+    
     private Buscable panelActual;
     private JTextField campoBusqueda;
     private boolean buscando = false;
@@ -65,10 +68,14 @@ public class App extends JFrame {
 
         JMenu menuGestion = new JMenu("Gestión");
         JMenuItem itemLibros = new JMenuItem("Gestión de Libros", new ImageIcon("assets/libros.png"));
-        JMenuItem itemUsuarios = new JMenuItem("Gestión de Usuarios,", new ImageIcon("assets/usuarios.png"));
+        // <<< CAMBIO >>> Menús separados
+        JMenuItem itemAdultos = new JMenuItem("Gestión de Adultos", new ImageIcon("assets/usuarios.png"));
+        JMenuItem itemJovenes = new JMenuItem("Gestión de Jóvenes", new ImageIcon("assets/usuarios.png")); // Reusamos ícono
         JMenuItem itemPrestamos = new JMenuItem("Gestión de Préstamos", new ImageIcon("assets/prestamos.png"));
+        
         menuGestion.add(itemLibros);
-        menuGestion.add(itemUsuarios);
+        menuGestion.add(itemAdultos); // Añadido
+        menuGestion.add(itemJovenes); // Añadido
         menuGestion.add(itemPrestamos);
 
         JMenu menuAyuda = new JMenu("Ayuda");
@@ -87,7 +94,8 @@ public class App extends JFrame {
 
         // Acciones del menú
         itemLibros.addActionListener(e -> mostrarPanel(LIBROS));
-        itemUsuarios.addActionListener(e -> mostrarPanel(USUARIOS));
+        itemAdultos.addActionListener(e -> mostrarPanel(ADULTOS)); // Nuevo
+        itemJovenes.addActionListener(e -> mostrarPanel(JOVENES)); // Nuevo
         itemPrestamos.addActionListener(e -> mostrarPanel(PRESTAMOS));
     }
 
@@ -99,7 +107,9 @@ public class App extends JFrame {
         toolBar.setFloatable(false);
 
         JButton btnLibros = crearBoton("Libros", "assets/libros.png", LIBROS);
-        JButton btnUsuarios = crearBoton("Usuarios", "assets/usuarios.png", USUARIOS);
+        // <<< CAMBIO >>> Botones separados
+        JButton btnAdultos = crearBoton("Adultos", "assets/usuarios.png", ADULTOS);
+        JButton btnJovenes = crearBoton("Jóvenes", "assets/usuarios.png", JOVENES);
         JButton btnPrestamos = crearBoton("Prestamos", "assets/prestamos.png", PRESTAMOS);
         JButton btnBuscar = crearBoton("Buscar", "assets/buscar.png", null);
 
@@ -118,7 +128,8 @@ public class App extends JFrame {
         btnBuscar.addActionListener(e -> toggleBusqueda());
 
         toolBar.add(btnLibros);
-        toolBar.add(btnUsuarios);
+        toolBar.add(btnAdultos); // Añadido
+        toolBar.add(btnJovenes); // Añadido
         toolBar.add(btnPrestamos);
         toolBar.add(Box.createHorizontalGlue());
         toolBar.add(btnBuscar);
@@ -142,11 +153,13 @@ public class App extends JFrame {
         panelPrincipal = new JPanel(cardLayout);
 
         panelLibros = new GestionLibrosUI();
-        panelUsuarios = new GestionUsuariosUI();
+        panelAdultos = new GestionAdultosUI(); // Renombrado
+        panelJovenes = new GestionJovenesUI(); // Nuevo
         panelPrestamos = new GestionPrestamosUI();
 
         panelPrincipal.add(panelLibros, LIBROS);
-        panelPrincipal.add(panelUsuarios, USUARIOS);
+        panelPrincipal.add(panelAdultos, ADULTOS); // Añadido
+        panelPrincipal.add(panelJovenes, JOVENES); // Añadido
         panelPrincipal.add(panelPrestamos, PRESTAMOS);
 
         panelActual = panelLibros;
@@ -155,15 +168,19 @@ public class App extends JFrame {
     }
 
     private void mostrarPanel(String nombre) {
+        // Actualiza los datos del panel que se va a mostrar
         switch (nombre) {
             case LIBROS -> panelLibros.actualizarDatos();
-            case USUARIOS -> panelUsuarios.actualizarDatos();
+            case ADULTOS -> panelAdultos.actualizarDatos();
+            case JOVENES -> panelJovenes.actualizarDatos();
             case PRESTAMOS -> panelPrestamos.actualizarDatos();
         }
 
+        // Asigna el panel actual para la funcionalidad de búsqueda
         panelActual = switch (nombre) {
             case LIBROS -> panelLibros;
-            case USUARIOS -> panelUsuarios;
+            case ADULTOS -> panelAdultos;
+            case JOVENES -> panelJovenes;
             case PRESTAMOS -> panelPrestamos;
             default -> panelActual;
         };
@@ -185,10 +202,6 @@ public class App extends JFrame {
         SwingUtilities.invokeLater(() -> {
             App app = new App();
             app.setVisible(true);
-            
-            
         });
-        
-        
     }
 }
